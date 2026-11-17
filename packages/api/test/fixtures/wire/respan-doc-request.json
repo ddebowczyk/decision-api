@@ -1,0 +1,1 @@
+{"model":"span-01-free","span":{"input":[{"role":"user","content":"This is the third time my order is late."}],"output":{"role":"assistant","content":"I am sorry, let me check on that for you."}},"behaviors":[{"id":"frustrated","definition":"The user expresses frustration or anger."},{"id":"apology","definition":"The assistant apologizes for a problem."}]}

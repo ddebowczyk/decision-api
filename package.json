@@ -1,0 +1,7 @@
+{
+  "name": "decisions-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": { "node": ">=22" }
+}

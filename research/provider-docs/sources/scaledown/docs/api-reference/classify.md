@@ -1,0 +1,779 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.scaledown.ai/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Classify API
+
+> POST /classify - score text against your own labels and rubrics and get a probability for each label.
+
+## Overview
+
+The `/classify` endpoint scores a piece of text against a set of labels you define and returns a softmax-normalised probability distribution. Each label is scored using a **rubric** - a yes/no question that describes what the label means. The label with the highest score is returned as `top_label`.
+
+## Request
+
+<ParamField body="text" type="string">
+  The text to classify. Provide exactly one of `text`, `chunks`, or `document`. If both `text` and `document` are given, the document text is appended after `text`.
+</ParamField>
+
+<ParamField body="chunks" type="array">
+  A batch of inputs to classify against the **same** `labels` and `system_prompt`. Each item is `{ "id": string, "text": string }`; the `id` is echoed back on the matching result so you can correlate them. Use this instead of sending one request per chunk: the shared profile (labels + system prompt) is billed **once** for the whole request instead of once per chunk. Cannot be combined with `text` or `document`. Capped at 50 chunks per request.
+</ParamField>
+
+<ParamField body="document" type="string">
+  A base64-encoded file to classify. Supported formats: JPEG, PNG, TIFF, single-page PDF, multi-page PDF. The text is read from the file and used as input. Either `text` or `document` must be provided.
+</ParamField>
+
+<ParamField body="document_mime_type" type="string">
+  MIME type of the document (e.g. `"image/jpeg"`, `"application/pdf"`). Required when `document` is provided.
+</ParamField>
+
+<ParamField body="labels" type="array" required>
+  One or more label definitions. Must contain at least one item - sending an empty array returns `422`.
+
+  <Expandable title="Label fields">
+    <ParamField body="name" type="string" required>
+      Short identifier for the label (e.g. `"medical"`, `"billing"`). Used as the key in the `scores` response object.
+    </ParamField>
+
+    <ParamField body="rubric" type="string" required>
+      A yes/no question the model uses to score the label. Phrased so that a "yes" answer means the label applies. See [Writing good rubrics](#writing-good-rubrics) for guidance.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="multi_label" type="boolean" default="false">
+  When `false` (default), the labels are treated as **mutually exclusive** options: scores are a softmax distribution that sums to `1.0` and exactly one `top_label` is returned. When `true`, each label is scored **independently** (its own yes/no decision), so several labels can apply to the same input at once. Scores are independent probabilities that do **not** sum to 1, and every label whose score meets `threshold` is returned in `matched_labels`. Use this to attach multiple tags to a single input. Capped at 16 labels in multi-label mode.
+</ParamField>
+
+<ParamField body="threshold" type="number" default="0.5">
+  Only used when `multi_label` is `true`. A label is included in `matched_labels` when its independent score is greater than or equal to this value. All scores are still returned, so you can also re-threshold client-side.
+</ParamField>
+
+<ParamField body="reasoning" type="boolean" default="true">
+  When `true` (default), a second model call writes a one-sentence `reasoning` explaining the label chosen by the first call. Set `false` to skip it: faster, and the extra reasoning input tokens (billed at 2x) are not charged. Only applies to single-label requests with a single `text`/`document`; multi-label and batch (`chunks`) requests never return `reasoning`.
+</ParamField>
+
+## Response
+
+<ResponseField name="top_label" type="string">
+  Name of the highest-scoring label.
+</ResponseField>
+
+<ResponseField name="reasoning" type="string">
+  One-sentence explanation of the decision (empty string when `reasoning` is `false`, or for multi-label and batch requests). It is generated **after** `top_label` is chosen, with the chosen label passed in, so it explains that decision. It is free-form text and is not a second opinion: if none of your labels fits the text well, it may say so (e.g. note that the text is about something else) while `top_label` still returns the best of the labels you gave. Add a catch-all label such as `other` to give those texts somewhere to go.
+</ResponseField>
+
+<ResponseField name="scores" type="object">
+  Map of label name → probability score. All values sum to `1.0`.
+</ResponseField>
+
+<ResponseField name="labels" type="array">
+  Full label list with name, score, and rubric, in the same order as the request.
+
+  <Expandable title="Label fields">
+    <ResponseField name="label" type="string">
+      Label name.
+    </ResponseField>
+
+    <ResponseField name="score" type="number">
+      Softmax-normalised probability (0–1). All scores across all labels sum to 1.0.
+    </ResponseField>
+
+    <ResponseField name="rubric" type="string">
+      The rubric as provided in the request.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="results" type="array">
+  Per-input results. Always present: for a single `text`/`document` request it has one element (with `id` `"0"`) and the top-level `top_label`/`scores`/`labels` mirror it. For a `chunks` request there is one element per chunk, each carrying its own calibrated scores.
+
+  <Expandable title="Result fields">
+    <ResponseField name="id" type="string">
+      The chunk `id` from the request (`"0"` for single-input requests).
+    </ResponseField>
+
+    <ResponseField name="top_label" type="string">
+      Highest-scoring label for this input. In multi-label mode this is the single highest-scoring label, or `""` if none met the threshold.
+    </ResponseField>
+
+    <ResponseField name="matched_labels" type="array | null">
+      Multi-label mode only: the labels whose independent score met `threshold`. `null` in single-label mode.
+    </ResponseField>
+
+    <ResponseField name="scores" type="object">
+      Map of label name → score for this input. Sums to `1.0` in single-label mode; independent (does not sum to 1) in multi-label mode.
+    </ResponseField>
+
+    <ResponseField name="labels" type="array">
+      Full label list with name, score, and rubric for this input.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="chunk_count" type="integer">
+  Number of inputs classified (`1` for single-input requests).
+</ResponseField>
+
+<ResponseField name="ocr_text" type="string | null">
+  The raw text extracted from the document. `null` if no `document` was provided.
+</ResponseField>
+
+**Score semantics:** In single-label mode, scores are relative probabilities that sum to 1 — a score of `0.85` means 85% of the probability mass relative to the other labels. In multi-label mode, each label's score is an independent probability that it applies, so scores do not sum to 1 and should be compared against `threshold` individually.
+
+## Error responses
+
+| Status | Meaning |
+| - | - |
+| `422 Unprocessable Entity` | Malformed request body, empty `labels` array, none of `text`/`chunks`/`document` provided, more than 50 chunks, more than 20 labels (16 in multi-label mode), or the document could not be read. |
+| `502 Bad Gateway` | Model service unavailable or returned an error. |
+
+## Authentication
+
+Include your API key in every request using the `x-api-key` header.
+
+```bash theme={null}
+-H "x-api-key: <your-api-key>"
+```
+
+## Examples
+
+### Basic topic classification
+
+<CodeGroup>
+  ```bash cURL theme={null}
+  curl -X POST https://api.scaledown.xyz/classify \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: <your-api-key>" \
+    -d '{
+      "text": "The patient presents with a high fever and difficulty breathing.",
+      "labels": [
+        {
+          "name": "medical",
+          "rubric": "Does this text describe a medical condition, symptom, or health topic?"
+        },
+        {
+          "name": "legal",
+          "rubric": "Does this text describe a legal matter, contract, or regulatory issue?"
+        },
+        {
+          "name": "financial",
+          "rubric": "Does this text describe a financial transaction, investment, or monetary matter?"
+        }
+      ]
+    }'
+  ```
+
+  ```python Python theme={null}
+  import requests
+
+  response = requests.post(
+      "https://api.scaledown.xyz/classify",
+      headers={"x-api-key": "<your-api-key>"},
+      json={
+          "text": "The patient presents with a high fever and difficulty breathing.",
+          "labels": [
+              {
+                  "name": "medical",
+                  "rubric": "Does this text describe a medical condition, symptom, or health topic?",
+              },
+              {
+                  "name": "legal",
+                  "rubric": "Does this text describe a legal matter, contract, or regulatory issue?",
+              },
+              {
+                  "name": "financial",
+                  "rubric": "Does this text describe a financial transaction, investment, or monetary matter?",
+              },
+          ],
+      },
+  )
+  print(response.json())
+  ```
+
+  ```typescript TypeScript theme={null}
+  const response = await fetch("https://api.scaledown.xyz/classify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "<your-api-key>",
+    },
+    body: JSON.stringify({
+      text: "The patient presents with a high fever and difficulty breathing.",
+      labels: [
+        {
+          name: "medical",
+          rubric: "Does this text describe a medical condition, symptom, or health topic?",
+        },
+        {
+          name: "legal",
+          rubric: "Does this text describe a legal matter, contract, or regulatory issue?",
+        },
+        {
+          name: "financial",
+          rubric: "Does this text describe a financial transaction, investment, or monetary matter?",
+        },
+      ],
+    }),
+  });
+  const data = await response.json();
+  ```
+</CodeGroup>
+
+**Response:**
+
+```json theme={null}
+{
+  "top_label": "medical",
+  "scores": {
+    "medical": 0.887,
+    "legal": 0.071,
+    "financial": 0.042
+  },
+  "labels": [
+    {
+      "label": "medical",
+      "score": 0.887,
+      "rubric": "Does this text describe a medical condition, symptom, or health topic?"
+    },
+    {
+      "label": "legal",
+      "score": 0.071,
+      "rubric": "Does this text describe a legal matter, contract, or regulatory issue?"
+    },
+    {
+      "label": "financial",
+      "score": 0.042,
+      "rubric": "Does this text describe a financial transaction, investment, or monetary matter?"
+    }
+  ]
+}
+```
+
+***
+
+### Support ticket triage
+
+<CodeGroup>
+  ```bash cURL theme={null}
+  curl -X POST https://api.scaledown.xyz/classify \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: <your-api-key>" \
+    -d '{
+      "text": "I was charged twice for my subscription this month and need a refund immediately.",
+      "labels": [
+        {
+          "name": "billing",
+          "rubric": "Is this text about a billing issue, charge, refund, or payment problem?"
+        },
+        {
+          "name": "technical",
+          "rubric": "Is this text about a technical problem, bug, or product not working correctly?"
+        },
+        {
+          "name": "account",
+          "rubric": "Is this text about account access, login, password, or account settings?"
+        },
+        {
+          "name": "general",
+          "rubric": "Is this a general question or inquiry that does not fit a specific support category?"
+        }
+      ]
+    }'
+  ```
+
+  ```python Python theme={null}
+  import requests
+
+  response = requests.post(
+      "https://api.scaledown.xyz/classify",
+      headers={"x-api-key": "<your-api-key>"},
+      json={
+          "text": "I was charged twice for my subscription this month and need a refund immediately.",
+          "labels": [
+              {"name": "billing",   "rubric": "Is this text about a billing issue, charge, refund, or payment problem?"},
+              {"name": "technical", "rubric": "Is this text about a technical problem, bug, or product not working correctly?"},
+              {"name": "account",   "rubric": "Is this text about account access, login, password, or account settings?"},
+              {"name": "general",   "rubric": "Is this a general question or inquiry that does not fit a specific support category?"},
+          ],
+      },
+  )
+  print(response.json())
+  ```
+
+  ```typescript TypeScript theme={null}
+  const response = await fetch("https://api.scaledown.xyz/classify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "<your-api-key>",
+    },
+    body: JSON.stringify({
+      text: "I was charged twice for my subscription this month and need a refund immediately.",
+      labels: [
+        { name: "billing",   rubric: "Is this text about a billing issue, charge, refund, or payment problem?" },
+        { name: "technical", rubric: "Is this text about a technical problem, bug, or product not working correctly?" },
+        { name: "account",   rubric: "Is this text about account access, login, password, or account settings?" },
+        { name: "general",   rubric: "Is this a general question or inquiry that does not fit a specific support category?" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  ```
+</CodeGroup>
+
+**Response:**
+
+```json theme={null}
+{
+  "top_label": "billing",
+  "scores": {
+    "billing": 0.921,
+    "technical": 0.034,
+    "account": 0.029,
+    "general": 0.016
+  },
+  "labels": [
+    { "label": "billing",   "score": 0.921, "rubric": "Is this text about a billing issue, charge, refund, or payment problem?" },
+    { "label": "technical", "score": 0.034, "rubric": "Is this text about a technical problem, bug, or product not working correctly?" },
+    { "label": "account",   "score": 0.029, "rubric": "Is this text about account access, login, password, or account settings?" },
+    { "label": "general",   "score": 0.016, "rubric": "Is this a general question or inquiry that does not fit a specific support category?" }
+  ]
+}
+```
+
+### Classifying a document
+
+Pass a base64-encoded image or PDF in the `document` field. The text is extracted automatically and classified against your labels. The raw extracted text is returned as `ocr_text`.
+
+<CodeGroup>
+  ```bash cURL theme={null}
+  # Encode a file and classify it
+  DOCUMENT=$(base64 -b 0 -i invoice.pdf)
+
+  curl -X POST https://api.scaledown.xyz/classify \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: <your-api-key>" \
+    -d '{
+      "document": "'"$DOCUMENT"'",
+      "document_mime_type": "application/pdf",
+      "labels": [
+        {
+          "name": "invoice",
+          "rubric": "Is this document an invoice or bill requesting payment?"
+        },
+        {
+          "name": "contract",
+          "rubric": "Is this document a legal contract or agreement between parties?"
+        },
+        {
+          "name": "report",
+          "rubric": "Is this document a business or financial report?"
+        }
+      ]
+    }'
+  ```
+
+  ```python Python theme={null}
+  import base64
+  import requests
+
+  with open("invoice.pdf", "rb") as f:
+      document = base64.b64encode(f.read()).decode()
+
+  response = requests.post(
+      "https://api.scaledown.xyz/classify",
+      headers={"x-api-key": "<your-api-key>"},
+      json={
+          "document": document,
+          "document_mime_type": "application/pdf",
+          "labels": [
+              {"name": "invoice", "rubric": "Is this document an invoice or bill requesting payment?"},
+              {"name": "contract", "rubric": "Is this document a legal contract or agreement between parties?"},
+              {"name": "report", "rubric": "Is this document a business or financial report?"},
+          ],
+      },
+  )
+  print(response.json())
+  ```
+
+  ```typescript TypeScript theme={null}
+  import fs from "fs";
+
+  const document = fs.readFileSync("invoice.pdf").toString("base64");
+
+  const response = await fetch("https://api.scaledown.xyz/classify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "<your-api-key>",
+    },
+    body: JSON.stringify({
+      document,
+      document_mime_type: "application/pdf",
+      labels: [
+        { name: "invoice", rubric: "Is this document an invoice or bill requesting payment?" },
+        { name: "contract", rubric: "Is this document a legal contract or agreement between parties?" },
+        { name: "report", rubric: "Is this document a business or financial report?" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  ```
+</CodeGroup>
+
+**Response:**
+
+```json theme={null}
+{
+  "top_label": "invoice",
+  "scores": {
+    "invoice": 0.941,
+    "contract": 0.037,
+    "report": 0.022
+  },
+  "labels": [
+    { "label": "invoice", "score": 0.941, "rubric": "Is this document an invoice or bill requesting payment?" },
+    { "label": "contract", "score": 0.037, "rubric": "Is this document a legal contract or agreement between parties?" },
+    { "label": "report", "score": 0.022, "rubric": "Is this document a business or financial report?" }
+  ],
+  "ocr_text": "INVOICE\nBill To: Acme Corp\nAmount Due: $4,200.00\nDue Date: June 1, 2025\n..."
+}
+```
+
+***
+
+### Multi-label: attaching several tags to one input
+
+Set `multi_label: true` to score each label independently, so more than one can apply to the same input. Every label whose score meets `threshold` is returned in `matched_labels`. This avoids sending the same input once per tag.
+
+<CodeGroup>
+  ```bash cURL theme={null}
+  curl -X POST https://api.scaledown.xyz/classify \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: <your-api-key>" \
+    -d '{
+      "text": "The invoice is overdue and the customer is threatening to cancel their contract.",
+      "multi_label": true,
+      "threshold": 0.5,
+      "labels": [
+        { "name": "billing",     "rubric": "Does this text describe a billing, invoice, or payment matter?" },
+        { "name": "churn_risk",  "rubric": "Does this text signal the customer may cancel or leave?" },
+        { "name": "legal",       "rubric": "Does this text describe a legal or contractual dispute?" }
+      ]
+    }'
+  ```
+
+  ```python Python theme={null}
+  import requests
+
+  response = requests.post(
+      "https://api.scaledown.xyz/classify",
+      headers={"x-api-key": "<your-api-key>"},
+      json={
+          "text": "The invoice is overdue and the customer is threatening to cancel their contract.",
+          "multi_label": True,
+          "threshold": 0.5,
+          "labels": [
+              {"name": "billing",    "rubric": "Does this text describe a billing, invoice, or payment matter?"},
+              {"name": "churn_risk", "rubric": "Does this text signal the customer may cancel or leave?"},
+              {"name": "legal",      "rubric": "Does this text describe a legal or contractual dispute?"},
+          ],
+      },
+  )
+  print(response.json())
+  ```
+
+  ```typescript TypeScript theme={null}
+  const response = await fetch("https://api.scaledown.xyz/classify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "<your-api-key>",
+    },
+    body: JSON.stringify({
+      text: "The invoice is overdue and the customer is threatening to cancel their contract.",
+      multi_label: true,
+      threshold: 0.5,
+      labels: [
+        { name: "billing",    rubric: "Does this text describe a billing, invoice, or payment matter?" },
+        { name: "churn_risk", rubric: "Does this text signal the customer may cancel or leave?" },
+        { name: "legal",      rubric: "Does this text describe a legal or contractual dispute?" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  ```
+</CodeGroup>
+
+**Response:** `billing` and `churn_risk` both cleared the threshold; scores are independent and do not sum to 1.
+
+```json theme={null}
+{
+  "top_label": "churn_risk",
+  "scores": { "billing": 0.88, "churn_risk": 0.79, "legal": 0.31 },
+  "labels": [
+    { "label": "billing",    "score": 0.88, "rubric": "Does this text describe a billing, invoice, or payment matter?" },
+    { "label": "churn_risk", "score": 0.79, "rubric": "Does this text signal the customer may cancel or leave?" },
+    { "label": "legal",      "score": 0.31, "rubric": "Does this text describe a legal or contractual dispute?" }
+  ],
+  "results": [
+    {
+      "id": "0",
+      "top_label": "churn_risk",
+      "matched_labels": ["billing", "churn_risk"],
+      "scores": { "billing": 0.88, "churn_risk": 0.79, "legal": 0.31 },
+      "labels": [
+        { "label": "billing",    "score": 0.88, "rubric": "Does this text describe a billing, invoice, or payment matter?" },
+        { "label": "churn_risk", "score": 0.79, "rubric": "Does this text signal the customer may cancel or leave?" },
+        { "label": "legal",      "score": 0.31, "rubric": "Does this text describe a legal or contractual dispute?" }
+      ]
+    }
+  ],
+  "chunk_count": 1
+}
+```
+
+***
+
+### Batch: classifying many chunks against one profile
+
+Send a `chunks` array to classify many inputs against the same `labels` in one request. Each chunk still gets its own calibrated scores, but the shared profile (labels + `system_prompt`) is billed once for the whole request instead of once per chunk. Results are returned in `results`, correlated by `id`.
+
+<CodeGroup>
+  ```bash cURL theme={null}
+  curl -X POST https://api.scaledown.xyz/classify \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: <your-api-key>" \
+    -d '{
+      "chunks": [
+        { "id": "msg-1", "text": "I love the new dashboard, it saves me so much time." },
+        { "id": "msg-2", "text": "The export button has been broken for a week." }
+      ],
+      "labels": [
+        { "name": "praise",     "rubric": "Is this text expressing satisfaction or positive feedback?" },
+        { "name": "bug_report", "rubric": "Is this text reporting a bug or something not working?" }
+      ]
+    }'
+  ```
+
+  ```python Python theme={null}
+  import requests
+
+  response = requests.post(
+      "https://api.scaledown.xyz/classify",
+      headers={"x-api-key": "<your-api-key>"},
+      json={
+          "chunks": [
+              {"id": "msg-1", "text": "I love the new dashboard, it saves me so much time."},
+              {"id": "msg-2", "text": "The export button has been broken for a week."},
+          ],
+          "labels": [
+              {"name": "praise",     "rubric": "Is this text expressing satisfaction or positive feedback?"},
+              {"name": "bug_report", "rubric": "Is this text reporting a bug or something not working?"},
+          ],
+      },
+  )
+  print(response.json())
+  ```
+
+  ```typescript TypeScript theme={null}
+  const response = await fetch("https://api.scaledown.xyz/classify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "<your-api-key>",
+    },
+    body: JSON.stringify({
+      chunks: [
+        { id: "msg-1", text: "I love the new dashboard, it saves me so much time." },
+        { id: "msg-2", text: "The export button has been broken for a week." },
+      ],
+      labels: [
+        { name: "praise",     rubric: "Is this text expressing satisfaction or positive feedback?" },
+        { name: "bug_report", rubric: "Is this text reporting a bug or something not working?" },
+      ],
+    }),
+  });
+  const data = await response.json();
+  ```
+</CodeGroup>
+
+**Response:** one entry per chunk, correlated by `id`. Top-level fields mirror the first result.
+
+```json theme={null}
+{
+  "top_label": "praise",
+  "scores": { "praise": 0.96, "bug_report": 0.04 },
+  "labels": [
+    { "label": "praise",     "score": 0.96, "rubric": "Is this text expressing satisfaction or positive feedback?" },
+    { "label": "bug_report", "score": 0.04, "rubric": "Is this text reporting a bug or something not working?" }
+  ],
+  "results": [
+    {
+      "id": "msg-1",
+      "top_label": "praise",
+      "matched_labels": null,
+      "scores": { "praise": 0.96, "bug_report": 0.04 },
+      "labels": [
+        { "label": "praise",     "score": 0.96, "rubric": "Is this text expressing satisfaction or positive feedback?" },
+        { "label": "bug_report", "score": 0.04, "rubric": "Is this text reporting a bug or something not working?" }
+      ]
+    },
+    {
+      "id": "msg-2",
+      "top_label": "bug_report",
+      "matched_labels": null,
+      "scores": { "praise": 0.02, "bug_report": 0.98 },
+      "labels": [
+        { "label": "praise",     "score": 0.02, "rubric": "Is this text expressing satisfaction or positive feedback?" },
+        { "label": "bug_report", "score": 0.98, "rubric": "Is this text reporting a bug or something not working?" }
+      ]
+    }
+  ],
+  "chunk_count": 2
+}
+```
+
+<Note>
+  `chunks` and `multi_label` can be combined: every chunk is scored independently against every label.
+</Note>
+
+***
+
+## Writing good rubrics
+
+The rubric is the most important part of a classify request. It is phrased as a yes/no question the model uses to score each label. The model scores how strongly the text "answers yes" to the question.
+
+**Rules of thumb:**
+
+* **Be specific.** Vague rubrics produce low-confidence, noisy scores.
+* **Frame as a direct yes/no question.** "Does this text describe X?" works better than "X content".
+* **Avoid negations.** "Is this text NOT about finance?" will confuse the model. Use a positive label instead.
+* **Keep rubrics independent.** Overlapping rubrics (e.g. "Is this medical?" and "Is this about health?") will split probability mass unpredictably.
+
+| Label | Poor rubric | Good rubric |
+| - | - | - |
+| `medical` | `medical content` | `Does this text describe a medical condition, symptom, treatment, or health topic?` |
+| `urgent` | `urgent or important` | `Does this text indicate that the sender needs an immediate response or is describing a time-sensitive situation?` |
+| `complaint` | `negative feedback` | `Is this text expressing dissatisfaction, frustration, or a formal complaint about a product or service?` |
+
+## How it works
+
+1. For each label, the model scores the `text` against the label's `rubric`.
+2. Raw scores are real-valued numbers (not probabilities).
+3. Softmax normalisation is applied across all label scores so they sum to 1.0.
+4. The label with the highest normalised score is returned as `top_label`.
+
+The endpoint always returns a winner - even if the model is uncertain. If you need a confidence threshold, apply it yourself on the `scores` field.
+
+## Notes
+
+* A request supports up to 20 labels in either mode; multi-label mode is further capped at 16. Batch requests are capped at 50 chunks. Larger sets cost more: in single-label mode all labels and rubrics go into one model call, so every extra label adds its rubric to the billed input tokens (and to the reasoning call, which re-sends them at 2x); in multi-label mode each label is a separate model call, and each chunk is scored separately, run with bounded concurrency.
+* In single-label mode, scores are **relative**, not absolute. A top score of `0.4` in a 10-label request can still be the correct answer - it just means probability mass was spread across many labels.
+* Batch (`chunks`) exists to reduce cost: the shared profile is billed once per request instead of once per chunk. Calibration is identical to sending each chunk separately.
+* Multi-label and batch requests do not return a `reasoning` field; single-label requests return it by default (see the `reasoning` parameter).
+
+
+## OpenAPI
+
+````yaml POST /classify
+openapi: 3.1.0
+info:
+  title: ScaleDown API
+  version: 1.0.0
+servers:
+  - url: https://api.scaledown.xyz
+security:
+  - apiKey: []
+paths:
+  /classify:
+    post:
+      summary: Classify
+      description: >-
+        Score text against a set of user-defined labels and return a
+        softmax-normalised probability distribution.
+      operationId: classify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+                - labels
+              properties:
+                text:
+                  type: string
+                  description: The text to classify.
+                labels:
+                  type: array
+                  description: >-
+                    One or more label definitions. Must contain at least one
+                    item.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - rubric
+                    properties:
+                      name:
+                        type: string
+                        description: >-
+                          Short identifier for the label (e.g. "medical",
+                          "billing"). Used as the key in the scores response
+                          object.
+                      rubric:
+                        type: string
+                        description: >-
+                          A yes/no question the model uses to score the label.
+                          Phrased so that a "yes" answer means the label
+                          applies.
+      responses:
+        '200':
+          description: Successful classification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  top_label:
+                    type: string
+                    description: Name of the highest-scoring label.
+                  scores:
+                    type: object
+                    description: >-
+                      Map of label name to probability score. All values sum to
+                      1.0.
+                    additionalProperties:
+                      type: number
+                  labels:
+                    type: array
+                    description: >-
+                      Full label list with name, score, and rubric, in the same
+                      order as the request.
+                    items:
+                      type: object
+                      properties:
+                        label:
+                          type: string
+                        score:
+                          type: number
+                        rubric:
+                          type: string
+        '422':
+          description: Malformed request body or empty labels array.
+        '502':
+          description: Model service unavailable or returned an error.
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+````
+
+This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.

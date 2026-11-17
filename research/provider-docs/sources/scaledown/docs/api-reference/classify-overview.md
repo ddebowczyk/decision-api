@@ -1,0 +1,80 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.scaledown.ai/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# Classify overview
+
+> Score text against labels you define. Use the custom /classify API for labels with rubrics, or the Jev-compatible Decisions API for typed questions.
+
+## Two ways to classify
+
+Classify is one model (`classify`, or `classify-1` to pin version 1) with two APIs. Pick based on the request shape you want to send.
+
+| | Custom ScaleDown API | Decisions API (Jev-compatible) |
+| - | - | - |
+| Endpoint | [`POST /classify`](/api-reference/classify) | [`POST /v1/scaledown`](/api-reference/decisions) |
+| You send | Text plus a list of `labels`, each with a `rubric` | A `state` plus named `questions` of type `choice`, `noul` or `score` |
+| You get | A probability per label and a `top_label` | One typed answer per question |
+| Best for | Routing, tagging and moderation where you write the rubrics | Porting an existing Jev integration, or asking several different questions about one item at once |
+| Extras | Batching (`chunks`), multi-label, image input, `reasoning` | Same request and response shape as Jev |
+
+If you are not migrating from Jev, start with `/classify`. The Decisions API runs on the same scoring model, as a thinner layer over `/classify`.
+
+## What it does
+
+The `/classify` endpoint takes a piece of text and a set of labels you define, then returns a probability score for each label indicating how well the text fits. Scores are softmax-normalised across all labels so they sum to 1.0, and the highest-scoring label is returned as `top_label`.
+
+Each label is scored by running the text against a **rubric** - a yes/no question you write that describes what the label means. The model judges how strongly the text "answers yes" to each question, then normalises the results into a probability distribution.
+
+## When to use it
+
+**You need to route incoming content.** Support tickets, user messages, or documents need to reach the right handler. Classify lets you define your own categories without training a model - just write rubrics that describe each category.
+
+**You're building a moderation layer.** A two-label setup (`spam` / `not spam`, `safe` / `unsafe`) gives you a confidence score you can threshold however your policy requires.
+
+**You need intent detection.** Identify whether an incoming message is a question, complaint, feedback, or cancellation request - and act on it accordingly.
+
+**You want domain tagging at scale.** Tag documents as `medical`, `legal`, `financial`, or any domain relevant to your pipeline, without fine-tuning or labelling training data.
+
+## Common use cases
+
+| Use case | How classify helps |
+| - | - |
+| Support ticket triage | Route tickets to billing, technical, or account teams automatically |
+| Content moderation | Score content against a rubric for spam, toxicity, or policy violations |
+| Intent detection | Identify question / complaint / feedback / cancellation intent |
+| Domain tagging | Label documents by topic for downstream routing or filtering |
+| Lead qualification | Score inbound inquiries against criteria like urgency or deal size |
+| Email categorisation | Sort inbound email into categories without a rules engine |
+
+## How it fits into your workflow
+
+Classify sits between your input source and your routing or handling logic. You pass in the raw text - a ticket, a message, a document - and use the scores to decide what to do next.
+
+```
+[Incoming text] → [POST /classify] → [Route based on top_label or scores]
+```
+
+The response gives you both a `top_label` for simple routing and the full `scores` map if you need finer-grained control (e.g. only act if the top score exceeds a threshold).
+
+## Writing good rubrics
+
+The rubric is the most important part of a classify request. Poor rubrics produce noisy, unreliable scores; well-written rubrics are specific, direct, and independent.
+
+**Rules of thumb:**
+
+* **Be specific.** Vague rubrics produce low-confidence scores.
+* **Frame as a yes/no question.** "Does this text describe X?" outperforms "X content".
+* **Avoid negations.** "Is this NOT about finance?" will confuse the model. Use a positive label instead.
+* **Keep rubrics independent.** Overlapping rubrics (e.g. "Is this medical?" and "Is this about health?") split probability mass unpredictably.
+
+**Examples:**
+
+| Label | Poor rubric | Good rubric |
+| - | - | - |
+| `medical` | `medical content` | `Does this text describe a medical condition, symptom, treatment, or health topic?` |
+| `urgent` | `urgent or important` | `Does this text indicate that the sender needs an immediate response or is describing a time-sensitive situation?` |
+| `complaint` | `negative feedback` | `Is this text expressing dissatisfaction, frustration, or a formal complaint about a product or service?` |
+
+
+This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.

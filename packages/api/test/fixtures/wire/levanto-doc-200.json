@@ -1,0 +1,12 @@
+{
+  "model": "levanto-sage-2",
+  "answers": {
+    "billing": { "type": "noul", "noul": 1.0 },
+    "tone": { "type": "choice", "choice": "calm", "confidence": 0.82,
+      "probabilities": { "angry": 0.18, "calm": 0.82 } },
+    "urgency": { "type": "score", "score": 1.62, "confidence": 0.66,
+      "legend": { "0": "Can wait", "1": "This week", "2": "Today" },
+      "probabilities": { "0": 0.05, "1": 0.29, "2": 0.66 } }
+  },
+  "usage": { "input_tokens": 240, "output_tokens": 0 }
+}

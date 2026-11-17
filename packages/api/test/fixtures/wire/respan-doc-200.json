@@ -1,0 +1,1 @@
+{"model":"span-01-free","results":[{"id":"frustrated","p_present":0.4459707,"p_absent":0.53500557,"p_not_observable":0.019023689},{"id":"apology","p_present":0.9433637,"p_absent":0.04003837,"p_not_observable":0.016597953}],"usage":{"input_tokens":39}}

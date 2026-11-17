@@ -1,0 +1,5 @@
+packages:
+  - packages/*
+minimumReleaseAgeExclude:
+  - '@effect/vitest@4.1.3'
+  - effect@4.1.3

@@ -1,0 +1,37 @@
+# ScaleDown
+
+- [Introduction](https://docs.scaledown.ai/introduction.md): What ScaleDown is, what you need, and where to go next.
+- [Quickstart](https://docs.scaledown.ai/quickstart.md): Make your first ScaleDown request in three steps.
+- [Understanding the response](https://docs.scaledown.ai/response.md): What the Compress API returns and how to read it.
+- [Overview](https://docs.scaledown.ai/api-reference/summarize-overview.md): Generate fluent, faithful summaries of long text.
+- [Summarize](https://docs.scaledown.ai/api-reference/summarize.md): Produce an abstractive summary of a block of text through the OpenAI-compatible chat completions API.
+- [Overview](https://docs.scaledown.ai/api-reference/extract-overview.md): Pull structured data from unstructured text using a schema you define in plain English.
+- [Extract](https://docs.scaledown.ai/api-reference/extract.md): Extract named entities from text using a custom-defined schema through the OpenAI-compatible chat completions API.
+- [Classify overview](https://docs.scaledown.ai/api-reference/classify-overview.md): Score text against labels you define. Use the custom /classify API for labels with rubrics, or the Jev-compatible Decisions API for typed questions.
+- [Classify API](https://docs.scaledown.ai/api-reference/classify.md): POST /classify - score text against your own labels and rubrics and get a probability for each label.
+- [Decisions overview](https://docs.scaledown.ai/api-reference/decisions-overview.md): A drop-in replacement for the Jev Decisions API: answer typed choice, yes/no and scale questions about a piece of text.
+- [Decisions API](https://docs.scaledown.ai/api-reference/decisions.md): POST /v1/scaledown - Jev-compatible request and response. Send a state and a set of typed questions, get one answer per question.
+- [Overview](https://docs.scaledown.ai/api-reference/compress-overview.md): Reduce token usage across any AI workflow without changing your prompts or models.
+- [Compress](https://docs.scaledown.ai/api-reference/compress.md): Compress a prompt and context to reduce token usage while preserving semantic meaning.
+- [Overview](https://docs.scaledown.ai/benchmarks/overview.md): How ScaleDown's task-specific models compare to frontier LLMs on accuracy, cost and latency.
+- [Head-to-head](https://docs.scaledown.ai/benchmarks/providers.md): ScaleDown versus each provider's lineup on accuracy, cost and latency.
+- [Overview](https://docs.scaledown.ai/cookbooks/overview.md): 16 recipes for using ScaleDown's four models on voice, messages, documents and web pages.
+- [Voice & Calls](https://docs.scaledown.ai/cookbooks/voice.md): Calls, voice agents and meeting recordings, after transcription.
+- [Chats & Tickets](https://docs.scaledown.ai/cookbooks/messages.md): Email threads, Slack channels and support tickets.
+- [Files & Docs](https://docs.scaledown.ai/cookbooks/documents.md): Filings, contracts, reports and case files, including scanned documents.
+- [Web Pages](https://docs.scaledown.ai/cookbooks/web.md): Scraped pages and enriched records for GTM and signal products.
+- [Overview](https://docs.scaledown.ai/dietcode/overview.md): Cut token usage in Claude Code, Codex CLI and Cursor with automatic compression, summarization and intent routing.
+- [Install](https://docs.scaledown.ai/dietcode/install.md): Install DietCode and run the setup wizard.
+- [Proxy mode](https://docs.scaledown.ai/dietcode/proxy-mode.md): Route Claude Code through a local proxy that shrinks the context every turn.
+- [Supported clients](https://docs.scaledown.ai/dietcode/clients.md): What DietCode does in Claude Code, Codex CLI and Cursor.
+- [Overview](https://docs.scaledown.ai/slm-agent/overview.md): Scan your codebase for LLM calls and migrate them to ScaleDown models, then tune the prompts against your own data.
+- [Install](https://docs.scaledown.ai/slm-agent/install.md): Add ScaleDown Agent to Claude Code, Cursor, VS Code or any MCP client.
+- [Evaluate](https://docs.scaledown.ai/slm-agent/evaluate.md): Scan a project, get a migration plan, and apply it.
+- [Optimize](https://docs.scaledown.ai/slm-agent/optimize.md): Tune a ScaleDown prompt until it matches or beats the frontier model it replaced.
+
+## OpenAPI Specs
+
+- [openapi](/api-reference/openapi.json)
+
+
+This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.

@@ -1,0 +1,4 @@
+{"model":"gpt-6-luna","input":"I was charged twice for my order. Please refund it.","questions":[
+ {"type":"predicate","name":"refund","instructions":"Is the customer asking for money back?"},
+ {"type":"choice","name":"team","instructions":"Which team?","choices":[{"value":"billing","description":"Payments"},{"value":"technical","description":"Bugs"}]},
+ {"type":"score","name":"urgency","instructions":"How urgent?","levels":[{"label":"Routine"},{"label":"Soon"},{"label":"Immediate"}]}]}

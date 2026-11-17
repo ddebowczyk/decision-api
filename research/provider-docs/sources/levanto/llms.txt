@@ -1,0 +1,25 @@
+# Levanto Sage
+
+> Documentation for Sage by Levanto: decisions, extraction and streaming. Typed answers your software can act on, and a clear null when Sage isn't sure.
+
+- [Introduction](https://docs.levanto.ai/index.md): Decisions, extraction and streaming: answers your code can act on.
+- [Quickstart](https://docs.levanto.ai/decision-model/quickstart.md): Your first decision, extraction and stream.
+- [Pricing](https://docs.levanto.ai/pricing.md): Monthly plans, charged per token and per search.
+- [Extraction](https://docs.levanto.ai/extract.md): Words in, data out: typed values, where each was found, and how likely it is.
+- [Streaming decisions](https://docs.levanto.ai/stream.md): Decisions that keep up: the answer updates as the text arrives.
+- [Yes/No decisions](https://docs.levanto.ai/decision-model/yesno.md): Yes, no, or null when Sage isn't sure.
+- [Choice decisions](https://docs.levanto.ai/decision-model/choice.md): Pick one option from a set, or null when it's too close to call.
+- [Scale decisions](https://docs.levanto.ai/decision-model/scale.md): Score content against your own rubric.
+- [Sort decisions](https://docs.levanto.ai/decision-model/sort.md): Rank a list of items by a criterion.
+- [Tags decisions](https://docs.levanto.ai/decision-model/tags.md): A verdict per label: applies, doesn't apply, or null.
+- [Reasoning](https://docs.levanto.ai/decision-model/reasoning.md): Let Sage think a hard question through before answering.
+- [Grounding](https://docs.levanto.ai/decision-model/grounding.md): Search the web before deciding.
+- [Images (beta)](https://docs.levanto.ai/decision-model/images.md): Send an image as content for Yes/No, Choice, Scale and Tags.
+- [Batch requests](https://docs.levanto.ai/decision-model/batch.md): Many decisions in one call.
+- [Limits and errors](https://docs.levanto.ai/decision-model/limits.md): Size limits, status codes and error bodies.
+- [SystemOne API](https://docs.levanto.ai/systemone.md): Call Sage with the Jev-compatible SystemOne format.
+- [OpenAPI](https://docs.levanto.ai/openapi-schema.md): Machine-readable OpenAPI specification for the Sage API: decisions, extraction and streaming.
+- [Agent skill](https://docs.levanto.ai/levanto-sage-decide.md): Drop-in agent skill for Cursor and Claude.
+
+
+This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.

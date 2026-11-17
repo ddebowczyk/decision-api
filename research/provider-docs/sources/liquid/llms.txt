@@ -1,0 +1,69 @@
+# Liquid Docs
+
+> Documentation for Liquid AI Foundation Models (LFM)
+
+- [Liquid Foundation Models](https://docs.liquid.ai/lfm/models/complete-library.md): Liquid Foundation Models (LFMs) are a new class of multimodal architectures built for fast inference and on-device deployment. Browse all available models and formats here.
+- [Text Models](https://docs.liquid.ai/lfm/models/text-models.md): Liquid's LFM text models range from 230M to 24B parameters, delivering ultra-low-latency generation while matching the performance of much larger models. They come in both dense and MoE variants to deploy flexibly across different devices.
+- [Vision Models](https://docs.liquid.ai/lfm/models/vision-models.md): Liquid's LFM vision models pair LFM language backbones with SigLIP2 NaFlex image encoders for fast multimodal inference on-device.
+- [Audio Models](https://docs.liquid.ai/lfm/models/audio-models.md): Liquid's LFM audio models are among the smallest fully interleaved audio/text-in, audio/text-out models with a complete reasoning backbone — eliminating the need to combine separate TTS/ASR encoders with a standalone language model.
+- [Decision Models](https://docs.liquid.ai/lfm/models/decision-models.md): Purpose-built models for structured decisions: classification, routing, and scoring in a single call with zero generated tokens
+- [Liquid Nanos](https://docs.liquid.ai/lfm/models/liquid-nanos.md): A library of low-latency, task-specific models fine-tuned on Liquid's multimodal LFM base models. Nanos deliver high accuracy on narrow tasks while remaining small enough to deploy on-device or serve economically at high volume.
+- [Chat Template](https://docs.liquid.ai/lfm/key-concepts/chat-template.md): The chat template defines how conversations are structured using special tokens and roles. LFM2 uses a ChatML-like chat template to structure conversations as follows:
+- [Prompting Guide](https://docs.liquid.ai/lfm/key-concepts/text-generation-and-prompting.md): This guide covers how to effectively use system prompts, user prompts, and assistant prompts with LFM2 models, along with an overview of sampling parameters and special prompting recipes for specific models.
+- [Tool Use](https://docs.liquid.ai/lfm/key-concepts/tool-use.md): LFM2.5 and LFM2 models support tool use (function calling), enabling models to interact with APIs, databases, and external services to provide accurate, up-to-date information.
+- [Vision Capabilities](https://docs.liquid.ai/lfm/key-concepts/vision-capabilities.md): Use LFM2.5-VL models for image understanding, multi-image prompting, OCR, layout annotations, grounding, and vision-guided tool calling.
+- [Speculative Decoding](https://docs.liquid.ai/lfm/key-concepts/speculative-decoding.md): Speed up LFM2.5 text and vision models with DSpark draft models in SGLang, llama.cpp, and MLX-VLM, with no change to output.
+- [Overview](https://docs.liquid.ai/lfm/fine-tuning/overview.md): Decide when to fine-tune an LFM and choose the right training workflow.
+- [Liquid Finetune](https://docs.liquid.ai/lfm/fine-tuning/liquid-finetune.md): Prepare data, train, evaluate, and export customized Liquid Foundation Models with Liquid Finetune.
+- [Datasets](https://docs.liquid.ai/lfm/fine-tuning/datasets.md): Dataset formats for SFT, DPO, and VLM fine-tuning
+- [TRL](https://docs.liquid.ai/lfm/fine-tuning/trl.md): TRL (Transformer Reinforcement Learning) is a library for fine-tuning and aligning language models using methods like Supervised Fine-Tuning (SFT), Reward Modeling, and Direct Preference Optimization (DPO).
+- [Unsloth](https://docs.liquid.ai/lfm/fine-tuning/unsloth.md): Unsloth makes fine-tuning LLMs 2-5x faster with 70% less memory through optimized kernels and efficient memory management.
+- [llama.cpp](https://docs.liquid.ai/deployment/on-device/llama-cpp.md): Run Liquid AI LFM models locally with llama.cpp. Setup, GGUF downloads, and generation parameters for on-device inference.
+- [iOS & Android](https://docs.liquid.ai/deployment/on-device/llama-cpp/mobile.md): Embed llama.cpp directly in an iOS or Android app and run LFM GGUF models on-device through the native C API.
+- [LM Studio](https://docs.liquid.ai/deployment/on-device/lm-studio.md): Run Liquid AI LFM models in LM Studio. Download GGUF models and start generating with a graphical interface.
+- [MLX](https://docs.liquid.ai/deployment/on-device/mlx.md): Run Liquid AI LFM models on Apple Silicon with MLX. Setup, model downloads, and Metal-accelerated inference on M-series chips.
+- [ONNX](https://docs.liquid.ai/deployment/on-device/onnx.md): Run Liquid AI LFM models with ONNX Runtime on CPU, GPU, NPU, and WebGPU for cross-platform on-device inference.
+- [Ollama](https://docs.liquid.ai/deployment/on-device/ollama.md): Deploy Liquid AI LFM models with Ollama. Pull, configure, and serve LFM2.5 models locally with an OpenAI-compatible API.
+- [Atomic Chat](https://docs.liquid.ai/deployment/on-device/atomic-chat.md): Run Liquid AI LFM models locally with Atomic Chat, a desktop and mobile app with a graphical interface.
+- [Transformers](https://docs.liquid.ai/deployment/gpu-inference/transformers.md): Run Liquid AI LFM models with Hugging Face Transformers. Load, configure, and generate with LFM2.5 models in Python.
+- [SGLang](https://docs.liquid.ai/deployment/gpu-inference/sglang.md): Serve LFM2.5 with SGLang, a low-latency OpenAI-compatible serving framework. The full recipe, verified on real hardware, lives in the SGLang cookbook.
+- [vLLM](https://docs.liquid.ai/deployment/gpu-inference/vllm.md): Serve LFM2.5 with vLLM, a high-throughput OpenAI-compatible inference engine. The full recipe, verified on real hardware, lives in the vLLM cookbook.
+- [Modal](https://docs.liquid.ai/deployment/gpu-inference/modal.md): Deploy Liquid AI LFM models on Modal with serverless GPU inference and instant autoscaling.
+- [Baseten](https://docs.liquid.ai/deployment/gpu-inference/baseten.md): Deploy Liquid AI LFM models on Baseten with optimized inference, autoscaling, and multi-cloud support.
+- [Fal](https://docs.liquid.ai/deployment/gpu-inference/fal.md): Deploy Liquid AI LFM models on Fal for serverless inference with fast autoscaling.
+- [Hardware Evaluation](https://docs.liquid.ai/guides/hardware-evaluation.md): Profile Liquid Foundation Models for latency, throughput, and memory on your target hardware.
+- [Use Case Evaluation](https://docs.liquid.ai/guides/use-case-evaluation.md): Evaluate LFMs as drop-in replacements for an existing application or workflow.
+- [Migration Guide](https://docs.liquid.ai/guides/migration-guide.md): Move from Qwen, Llama, or Gemma to LFMs while avoiding the common migration pitfalls.
+- [Decision Model Guide](https://docs.liquid.ai/guides/decision-model-guide.md): Replace LLM classification, routing, and scoring calls with decision models for faster, cheaper, and more consistent structured decisions.
+- [FAQs](https://docs.liquid.ai/lfm/help/faqs.md): Frequently asked questions about LFM models and deployment.
+- [Troubleshooting](https://docs.liquid.ai/lfm/help/troubleshooting.md): Common issues and solutions when working with LFM models.
+- [Deprecations](https://docs.liquid.ai/lfm/help/deprecations.md): Deprecated Liquid Foundation Models and their recommended replacements. Deprecated models remain available for download but are no longer actively maintained or recommended for new projects.
+- [Contributing to Docs](https://docs.liquid.ai/lfm/help/contributing.md): Guidelines for contributing to Liquid AI documentation.
+- [Connect AI Tools](https://docs.liquid.ai/lfm/help/connect-ai-tools.md): Connect your AI coding tools to Liquid Docs via MCP for live, queryable access to documentation
+- [LFM Open License User Guide](https://docs.liquid.ai/lfm/help/model-license.md): Understand how you can use, modify, and distribute Liquid Foundation Models under the LFM Open License v1.0.
+- [Examples Library](https://docs.liquid.ai/examples/index.md): Browse example projects and tutorials built with Liquid AI LFM models across laptop, Android, web, and fine-tuning use cases.
+- [Connect AI Tools](https://docs.liquid.ai/examples/connect-ai-tools.md): Connect your AI coding tools to Liquid Docs via MCP for live, queryable access to documentation
+- [Run local agents with LFMs](https://docs.liquid.ai/examples/agent-harnesses.md): Run local agents with LFMs by connecting a locally served model to agent harnesses like Hermes Agent, OpenClaw, and Pi.
+- [Invoice extractor tool](https://docs.liquid.ai/examples/laptop-examples/invoice-extractor-tool-with-liquid-nanos.md): Extract structured payment details from invoice PDFs using LFM2.5-VL-1.6B and llama.cpp, running fully local.
+- [Build a game with decision models](https://docs.liquid.ai/examples/laptop-examples/build-a-game-with-decision-models.md): Build a pixel-art survival racer where Liquid AI decision models choose the safest lane in real time via structured classification.
+- [Audio transcription in real-time](https://docs.liquid.ai/examples/laptop-examples/audio-to-text-in-real-time.md): Real-time audio transcription using LFM2.5-Audio-1.5B with llama.cpp, running fully local on your machine.
+- [Bidirectional English to Korean translation CLI](https://docs.liquid.ai/examples/laptop-examples/lfm2-english-to-korean.md): CLI translation tool using a fine-tuned Liquid AI LFM2 model for bidirectional English-Korean translation with automatic language detection.
+- [Flight search assistant with tool calling](https://docs.liquid.ai/examples/laptop-examples/flight-search-assistant.md): CLI flight search assistant using LFM2.5-1.2B-Thinking for multi-step reasoning and tool calling to search and book flights.
+- [Audio car cockpit demo](https://docs.liquid.ai/examples/laptop-examples/audio-car-cockpit.md): Voice-controlled car cockpit demo combining LFM2.5-Audio for speech and LFM2 for tool calling, running entirely local.
+- [Meeting summarization CLI](https://docs.liquid.ai/examples/laptop-examples/meeting-summarization.md): Summarize meeting transcripts locally using LFM2-2.6B-Transcript and llama.cpp with no cloud dependencies.
+- [Browser control with GRPO reinforcement learning](https://docs.liquid.ai/examples/laptop-examples/browser-control.md): Train a Liquid AI LFM model for web automation using GRPO reinforcement learning with BrowserGym environments.
+- [Product Slogan Generator with LeapSDK](https://docs.liquid.ai/examples/android/slogan-generator.md): Simple Android app for on-device text generation using a Liquid AI LFM model to create product slogans.
+- [Web Content Summarizer for Android](https://docs.liquid.ai/examples/android/web-content-summarizer.md): Android app that summarizes web pages on-device using a Liquid AI LFM model, with no cloud dependencies.
+- [Generate Structured Recipes with Constrained Output](https://docs.liquid.ai/examples/android/recipe-generator-constrained-output.md): Android app demonstrating constrained JSON generation to produce structured recipe output using a Liquid AI LFM model on-device.
+- [Image Understanding with Vision Language Models](https://docs.liquid.ai/examples/android/vision-language-model-example.md): Android app for on-device image understanding and visual Q&A using LFM2.5-VL-1.6B with Jetpack Compose.
+- [Build AI Agents with Koog Framework on Android](https://docs.liquid.ai/examples/android/leap-koog-agent.md): Build on-device AI agents on Android using the Koog framework with Liquid AI LFM models, supporting tool calling and MCP.
+- [Real-time video captioning with LFM2.5-VL-1.6B and WebGPU](https://docs.liquid.ai/examples/web/vl-webgpu-demo.md): Run LFM2.5-VL-1.6B in the browser with WebGPU for real-time, private video captioning with no server required.
+- [LFM2.5-Audio browser demo with WebGPU](https://docs.liquid.ai/examples/web/audio-webgpu-demo.md): Run LFM2.5-Audio-1.5B in the browser with WebGPU for speech recognition, text-to-speech, and audio conversations, fully client-side.
+- [Hand & Voice Racer](https://docs.liquid.ai/examples/web/hand-voice-racer.md): Browser-based driving game controlled by hand gestures and voice commands using LFM2.5-Audio, running entirely client-side with WebGPU.
+- [Fine tuning LFM2-VL to identify car makers from images](https://docs.liquid.ai/examples/customize-models/car-maker-identification.md): Fine-tune LFM2-VL to identify car makers from images using structured output, LoRA, and an evaluation pipeline.
+- [Fine-tuning LFM for a local Home Assistant](https://docs.liquid.ai/examples/customize-models/home-assistant.md): End-to-end guide to fine-tuning and deploying a local home assistant with Liquid AI LFM models, covering prototyping, synthetic data, and tool calling.
+- [Fine-Tune a Vision-Language Model on Satellite Imagery](https://docs.liquid.ai/examples/customize-models/satellite-vlm.md): Fine-tune LFM2.5-VL-450M on satellite imagery for visual question answering, grounding, and captioning with liquid-finetune.
+- [Build a Wildfire Prevention System with a Compact VLM](https://docs.liquid.ai/examples/customize-models/wildfire-prevention.md): Build an on-satellite wildfire detection system using Sentinel-2 imagery and LFM2.5-VL-450M for in-orbit inference.
+
+
+This documentation is built and hosted on [Mintlify](https://mintlify.com), a developer documentation platform.
