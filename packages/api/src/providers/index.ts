@@ -1,9 +1,8 @@
 /**
- * Provider presets: TypeSafe, Perplexity, OpenAI and Basal, and `make` for
- * any deployment snapshot.
+ * Provider presets, deployment snapshots and model capability declarations.
  *
  * @since 0.1.0
  */
-export * as Provider from "../Provider.ts"
-export * as Deployment from "../Deployment.ts"
-export * as Capabilities from "../Capabilities.ts"
+export * as Provider from "./presets.ts"
+export * as Deployment from "./deployments.ts"
+export * as Capabilities from "./Capabilities.ts"

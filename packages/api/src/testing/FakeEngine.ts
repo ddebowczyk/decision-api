@@ -7,11 +7,11 @@
  */
 import type { Layer } from "effect"
 import type * as AiError from "effect/ai/AiError"
-import type * as Budget from "../Budget.ts"
-import * as Deployment from "../Deployment.ts"
-import * as Engine from "../Engine.ts"
-import type { Json } from "../Json.ts"
-import type * as Question from "../Question.ts"
+import type * as Budget from "../runtime/Budget.ts"
+import * as Deployment from "../providers/deployments.ts"
+import * as Engine from "../runtime/Engine.ts"
+import type { Json } from "../wire/Json.ts"
+import type * as Question from "../domain/Question.ts"
 
 /**
  * What the fake answers for one question (see `Engine.Canned`):

@@ -28,8 +28,13 @@ For agents that write code with the library or change it. Read [README.md](READM
 
 | Path | Contents |
 | --- | --- |
-| `src/` | Domain (`Q`, `Decision`, `Answer`), `Identity`, `Wire`, `Validate`, `Deployment`, codecs, `Planner`, `Transport`, `Engine`, `Budget`, `Fallback`, `Ledger`, `Metrics`, `Bridge`, `Errors` |
-| `src/providers/` | `Provider` presets and `Deployment`, exported as `@decisions/api/providers` |
-| `src/testing/` | `FakeEngine` (on `Engine.local`), `ScriptedHttp`, `Replies`, exported as `@decisions/api/testing` |
-| `test/` | Offline suites. `test/fixtures/wire/` holds captured live bodies, and `test/live/` the opt-in suite |
+| `src/domain/` | Questions, prepared decisions, answers, evidence, validation and identity |
+| `src/planning/` | Pure planning, capability checks and request partitioning |
+| `src/runtime/` | Engine, HTTP transport, retries, fallback, budget, ledger and metrics |
+| `src/wire/` | JSON and wire encoding, codec contract and shared System One codec |
+| `src/providers/<provider>/` | Provider preset, deployment snapshots and any provider-specific codec or feature declarations |
+| `src/providers/` | Shared provider construction, capability catalog and the `@decisions/api/providers` entry point |
+| `src/integrations/` | Effect AI decision-model bridge |
+| `src/testing/` | Fake engine, scripted HTTP and reply builders, exported as `@decisions/api/testing` |
+| `test/` | Offline suites grouped by responsibility, shared fixtures and opt-in live tests under `test/live/` |
 | `examples/` | Type-checked by `just check` and run with `just example <name>` |

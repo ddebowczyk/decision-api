@@ -3,9 +3,9 @@
  *
  * @since 0.1.0
  */
-import type * as Decision from "../Decision.ts"
-import type { JsonObject } from "../Json.ts"
-import * as Question from "../Question.ts"
+import type * as Decision from "../domain/Decision.ts"
+import type { JsonObject } from "../wire/Json.ts"
+import * as Question from "../domain/Question.ts"
 
 /**
  * A System One body: booleans as `noul`, choices with all mass on the label,
