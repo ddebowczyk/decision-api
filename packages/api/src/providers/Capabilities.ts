@@ -9,6 +9,7 @@ import * as Deployment from "./deployments.ts"
 import * as Identity from "../domain/Identity.ts"
 import type { JsonObject } from "../wire/Json.ts"
 import * as Wire from "../wire/Wire.ts"
+import { forModel as typesafeModel } from "./typesafe/capabilities.ts"
 import { sageFeatures } from "./levanto/features.ts"
 
 /** Capabilities used by planning, validation and retry. @since 0.1.0 */
@@ -60,11 +61,11 @@ const support = Schema.Literals(["supported", "unsupported", "unknown"])
 const values = Schema.Struct({
   grouping: Schema.Literals(["independent", "joint", "unknown"]),
   groupingSource: verification,
-  primitives: Schema.Array(Schema.Struct({ kind: Schema.NonEmptyString, version: Schema.NonEmptyString, minOutcomes: positiveInteger, maxOutcomes: limit })),
+  primitives: Schema.Array(Schema.Struct({ kind: Schema.NonEmptyString, version: Schema.NonEmptyString, minOutcomes: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)), maxOutcomes: limit })),
   structuredDescriptions: Schema.Boolean,
   structuredState: Schema.Boolean,
   booleanCriteria: Schema.Boolean,
-  limits: Schema.Struct({ questionsPerCall: limit, bodyBytes: limit, requestTokens: limit, stateChars: limit }),
+  limits: Schema.Struct({ questionsPerCall: limit, bodyBytes: limit, requestTokens: limit, questionTokens: Schema.optionalKey(limit), stateChars: limit }),
   tolerance: Schema.Number.check(Schema.isFinite(), Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(1)),
   toleranceSource: Schema.Literals(["documented", "assumed"]),
   retryableStatuses: Schema.Array(Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599)))
@@ -150,7 +151,7 @@ export const override = (catalog: Catalog, provider: string, model: string, patc
 }
 
 const models = (d: Deployment.Snapshot): ReadonlyArray<string> =>
-  [...new Set([d.defaultModel, ...Object.keys(d.aliases), ...Object.values(d.aliases).filter((m): m is string => m !== null)])]
+  [...new Set([d.defaultModel, ...(d.pinnedModels ?? []), ...Object.keys(d.aliases), ...Object.values(d.aliases).filter((m): m is string => m !== null)])]
 
 /**
  * Built-in static declarations. Aliases have their own entries; overriding an
@@ -163,7 +164,10 @@ export const builtIn: Catalog = [
   Deployment.openai, Deployment.respan, Deployment.clef, Deployment.clefFlash,
   Deployment.fastino, Deployment.jeff, Deployment.laya, Deployment.classifierDev
 ].flatMap((d) => models(d).map((model) => ({
-  ...declare(d, model),
+  ...(d.provider === "typesafe" ? typesafeModel(d, declare(d, model)) : declare(d, model)),
+  ...(d.codec === "clef-system-one" ? {
+    features: { images: { support: "supported" as const, adapterSupport: "supported" as const, constraints: { placement: "before-state", maxImages: 4 } } }
+  } : {}),
   ...(d.provider === "levanto" ? {
     features: sageFeatures,
     sources: [...d.sources, "https://docs.levanto.ai/llms.txt", "https://sage.levanto.ai/openapi.json"]
@@ -180,6 +184,7 @@ export const resolve = (d: Deployment.Snapshot, model: string, catalog: Catalog 
   const explicit = get(catalog, d.provider, model)
   if (explicit !== undefined) return explicit
   if (!models(d).includes(model)) return get(builtIn, d.provider, model)
+  if (d.provider === "typesafe") return typesafeModel(d, declare(d, model))
   return { ...declare(d, model), features: get(builtIn, d.provider, model)?.features ?? {} }
 }
 

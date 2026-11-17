@@ -10,6 +10,7 @@
  *
  * @since 0.1.0
  */
+import * as Box from "./Box.ts"
 import * as Evidence from "./Evidence.ts"
 import * as Question from "./Question.ts"
 
@@ -20,6 +21,7 @@ import * as Question from "./Question.ts"
  * @since 0.1.0
  */
 export interface Candidate {
+  readonly box?: unknown
   readonly label?: string | undefined
   readonly probabilities?: ReadonlyArray<readonly [outcome: string, probability: number]> | undefined
   /** The provider's own score, kept only to report a disagreement. */
@@ -94,19 +96,7 @@ const distribution = (
   }
 }
 
-/**
- * Validate one decoded answer against its question.
- *
- * - boolean: needs a distribution over `"true"`/`"false"`; value is P(true).
- * - choice: a distribution, a label, or both. The label must be known and,
- *   with a distribution, a most probable outcome (within tolerance). Without a
- *   label the value is the mode, ties to definition order. A label alone is
- *   label-only evidence.
- * - score: needs a distribution; value is the expected 0-based level index.
- *
- * @since 0.1.0
- */
-export const answer = (q: Question.Any, c: Candidate, tolerance: number): Verdict => {
+const finiteAnswer = (q: Question.Any, c: Candidate, tolerance: number): Verdict => {
   const outcomes = Question.outcomes(q)
   if (c.probabilities === undefined) {
     if (q.kind !== "choice") return invalid(`${q.kind} answer has no distribution`)
@@ -137,4 +127,22 @@ export const answer = (q: Question.Any, c: Candidate, tolerance: number): Verdic
       return { _tag: "Valid", value: c.label, evidence: d, corrections }
     }
   }
+}
+
+/**
+ * Validate one decoded answer against its question.
+ *
+ * - boolean: needs a distribution over `"true"`/`"false"`; value is P(true).
+ * - choice: a distribution, a label, or both. The label must be known and,
+ *   with a distribution, a most probable outcome (within tolerance). Without a
+ *   label the value is the mode, ties to definition order. A label alone is
+ *   label-only evidence.
+ * - score: needs a distribution; value is the expected 0-based level index.
+ *
+ * @since 0.1.0
+ */
+export const answer = (q: Question.Any, c: Candidate, tolerance: number): Verdict => {
+  if (q.kind !== "box") return finiteAnswer(q, c, tolerance)
+  const box = Box.decode(c.box)
+  return box === undefined ? invalid("invalid bounding box") : { _tag: "Valid", value: box, evidence: Evidence.spatial, corrections: [] }
 }

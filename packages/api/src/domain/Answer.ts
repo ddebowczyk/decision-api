@@ -22,6 +22,7 @@ export interface Origin {
   readonly requestedModel: string
   /** The model the provider reported, or `null` when it only echoed an alias. */
   readonly resolvedModel: string | null
+  readonly request?: JsonObject
   readonly lowerings: ReadonlyArray<string>
 }
 
@@ -48,6 +49,13 @@ export interface Answered<V, E extends Evidence.Evidence> {
 }
 
 /** @since 0.1.0 */
+export interface Abstained {
+  readonly status: "abstained"
+  readonly reason: string
+  readonly origin: Origin
+  readonly native: Native
+}
+
 export interface Refused {
   readonly status: "refused"
   readonly reason: string | null
@@ -69,7 +77,7 @@ export interface Invalid {
 }
 
 /** @since 0.1.0 */
-export type Answer<V, E extends Evidence.Evidence> = Answered<V, E> | Refused | Invalid
+export type Answer<V, E extends Evidence.Evidence> = Answered<V, E> | Refused | Abstained | Invalid
 
 /** @since 0.1.0 */
 export type Of<Q extends Question.Any> = Answer<Question.ValueOf<Q>, Question.EvidenceOf<Q>>

@@ -34,7 +34,13 @@ export interface LabelOnly {
 }
 
 /** @since 0.1.0 */
-export type Evidence = FiniteDistribution<string> | LabelOnly
+export interface Spatial {
+  readonly kind: "bounding-box"
+}
+
+export const spatial: Spatial = { kind: "bounding-box" }
+
+export type Evidence = Spatial | FiniteDistribution<string> | LabelOnly
 
 /** @since 0.1.0 */
 export type BooleanOutcome = "true" | "false"

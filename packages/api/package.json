@@ -1,6 +1,6 @@
 {
   "name": "@decisions/api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Typed, provider-portable decision API on Effect v4",
   "type": "module",
   "license": "UNLICENSED",

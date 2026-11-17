@@ -86,7 +86,7 @@ const toQuestion = (d: Supported): Q.Any => {
 /** One upstream answer, or `undefined` to leave the key out (settles as `Missing`). */
 const toProviderAnswer = (kind: Supported["_tag"], a: Answer.Any): DecisionModel.ProviderAnswer | undefined => {
   if (a.status === "refused") return { _tag: "Refusal" }
-  if (a.status === "error") return undefined
+  if (a.status !== "answered") return undefined
   const probabilities = a.evidence.kind === "finite-distribution" ? { probabilities: a.evidence.probabilities } : {}
   const confidence = a.native.confidence !== undefined ? { confidence: a.native.confidence } : {}
   switch (kind) {
@@ -100,7 +100,7 @@ const toProviderAnswer = (kind: Supported["_tag"], a: Answer.Any): DecisionModel
 }
 
 const detailOf = (a: Answer.Any): string | null =>
-  a.status === "refused" ? a.reason : a.status === "error" ? a.problem : null
+  a.status === "error" ? a.problem : a.status === "answered" ? null : a.reason
 
 const requestError = (description: string) =>
   AiError.make({ module: "Bridge", method: "decide", reason: new AiError.InvalidRequestError({ description }) })

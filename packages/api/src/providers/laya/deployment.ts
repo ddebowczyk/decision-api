@@ -15,7 +15,7 @@ import { bearer, core, exact } from "../deployment-defaults.ts"
 export const laya: Snapshot = {
   _tag: "DeploymentSnapshot",
   id: "laya",
-  version: "2026-10-18",
+  version: "2026-11-17",
   provider: "laya",
   codec: "system-one",
   envelope: "none",
@@ -33,7 +33,8 @@ export const laya: Snapshot = {
   limits: {
     questionsPerCall: exact(64),
     bodyBytes: { value: 1024 * 1024, evidence: "conservative-bound", note: "laya-serve 2 MiB; typed-decision-lab 1 MiB" },
-    requestTokens: exact(1_024, "context per question row (state + question)"),
+    requestTokens: "unknown",
+    questionTokens: exact(1_024, "context per question row (state + question)"),
     stateChars: exact(50_000)
   },
   // 4-decimal rounding over up to 100 options.

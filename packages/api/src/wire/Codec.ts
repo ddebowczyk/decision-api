@@ -6,6 +6,8 @@
  * @since 0.1.0
  */
 import { Data, type Result } from "effect"
+import type { Reasoning } from "../providers/deployment.ts"
+import type * as Image from "../domain/Image.ts"
 import type * as Answer from "../domain/Answer.ts"
 import type { Json, JsonObject } from "./Json.ts"
 import type * as Question from "../domain/Question.ts"
@@ -20,6 +22,8 @@ import type * as Wire from "./Wire.ts"
 export interface CallSpec {
   readonly model: string
   readonly state: Json
+  readonly images?: ReadonlyArray<Image.Prepared>
+  readonly reasoning?: Reasoning
   readonly questions: ReadonlyArray<{ readonly id: string; readonly question: Question.Any }>
 }
 
@@ -39,6 +43,7 @@ export interface Usage {
 /** @since 0.1.0 */
 export type DecodedAnswer =
   | { readonly _tag: "Candidate"; readonly candidate: Validate.Candidate; readonly native: Answer.Native }
+  | { readonly _tag: "Abstained"; readonly reason: string; readonly native: Answer.Native }
   | { readonly _tag: "Refused"; readonly reason: string | null; readonly native: Answer.Native }
   | { readonly _tag: "Malformed"; readonly problem: string; readonly native: Answer.Native }
 
@@ -82,6 +87,13 @@ export interface Codec {
    * fails with `provider-constraint`. Pure; empty when the call is fine.
    */
   readonly preflight?: ((spec: CallSpec) => ReadonlyArray<Problem>) | undefined
+  readonly nativeAbstention?: true
+  readonly reasoning?: true
+  readonly images?: {
+    readonly headers?: Readonly<Record<string, string>>
+    readonly estimateTokens?: (images: ReadonlyArray<Image.Prepared>) => number
+    readonly preflight: (images: ReadonlyArray<Image.Prepared>) => ReadonlyArray<Problem>
+  }
   readonly encode: (spec: CallSpec) => Wire.Value
   readonly decode: (spec: CallSpec, body: unknown) => Result.Result<Decoded, CodecError>
 }

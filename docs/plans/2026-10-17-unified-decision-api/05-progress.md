@@ -135,3 +135,24 @@ points, all 11 preset configurations, deployment snapshots, and the built-in
 capability catalog matched the prior revision in a before-and-after comparison.
 `just gate` passed 254 offline tests. `just live` passed 16 live tests and
 skipped 4 under the suite's environment gates.
+
+## Native capabilities and release 0.3.0
+
+1. Jev 1.13 and 1.14 accept typed PNG and JPEG input. A live boolean request
+   on pinned 1.14 answered a synthetic visual question. Fixtures cover the
+   Jev 1.14 Box wire format and normalized coordinates.
+2. The planner checks state length and estimates request and per-question
+   context separately. Preview surfaces the estimate and possible truncation.
+   Jev image token costs remain unknown.
+3. Clef and Clef Flash encode image payloads. A live Clef request answered the
+   same visual question. Offline fallback tests verify that the surviving
+   provider receives the image and text-only fallbacks fail before HTTP.
+4. Sage native abstention stays distinct from refusal and preserves answered
+   siblings in fixtures. A live native request returned a typed decision and
+   reasoning metadata. In a six-case paired synthetic run both modes scored
+   6/6. Median latency was 358 ms with reasoning off and 1,074.5 ms with
+   reasoning on. Reported input/output tokens totaled 494/0 and 1,420/181.
+   The run does not establish a quality difference.
+
+`just gate` passed 268 offline tests. `just live` passed 19 tests and skipped 4.
+The packaged JavaScript loaded from all three entry points in a clean install.

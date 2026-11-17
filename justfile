@@ -29,3 +29,15 @@ live *args:
 # run an example, e.g. `just example triage`
 example name:
     cd {{api}} && node --env-file-if-exists=../../.env examples/{{name}}.ts
+
+# Show, check, set, or bump the package version.
+version *args:
+    node ops/version.mjs "$@"
+
+# Build an installable JavaScript and TypeScript declaration archive.
+package destination="dist":
+    node ops/package.mjs "$@"
+
+# Publish the current version and compiled package to the GitHub release for origin.
+release *args:
+    node ops/github-release.mjs "$@"

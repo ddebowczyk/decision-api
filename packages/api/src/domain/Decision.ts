@@ -6,6 +6,7 @@
  */
 import { Data, Effect, Schema } from "effect"
 import type * as Answer from "./Answer.ts"
+import * as Image from "./Image.ts"
 import * as Identity from "./Identity.ts"
 import type { Json } from "../wire/Json.ts"
 import * as Question from "./Question.ts"
@@ -155,12 +156,20 @@ export const question = <D extends Any>(d: D, id: QuestionId<D>): Question.Any =
  *
  * @since 0.1.0
  */
+export interface PrepareOptions {
+  /** Require a decision operation that can abstain on boolean and choice questions. */
+  readonly requireNativeAbstention?: true
+  readonly images?: ReadonlyArray<Image.Input>
+}
+
 export interface Prepared<D extends Any = Any> {
   readonly _tag: "PreparedDecision"
   readonly definition: D
   readonly definitionId: string
   readonly input: Json
   readonly inputId: string
+  readonly requireNativeAbstention?: true
+  readonly images?: ReadonlyArray<Image.Prepared>
 }
 
 /**
@@ -186,7 +195,8 @@ export class PreparationError extends Data.TaggedError("PreparationError")<{
  */
 export const prepare = <D extends Any>(
   definition: D,
-  input: Input<D>
+  input: Input<D>,
+  options: PrepareOptions = {}
 ): Effect.Effect<Prepared<D>, PreparationError, D["input"]["EncodingServices"]> =>
   Schema.encodeEffect(Schema.toCodecJson(definition.input as Schema.Constraint))(input).pipe(
     Effect.mapError((cause) =>
@@ -197,20 +207,32 @@ export const prepare = <D extends Any>(
         cause
       })
     ),
-    Effect.map((encoded) => {
-      const json = encoded as Json
-      return {
-        _tag: "PreparedDecision" as const,
-        definition,
-        definitionId: Identity.definition(definition),
-        input: json,
-        inputId: Identity.input(json)
-      }
-    }),
+    Effect.flatMap((encoded) => Effect.try({
+      try: () => {
+        const json = encoded as Json
+        const images = options.images?.map(Image.prepare) ?? []
+        return {
+          _tag: "PreparedDecision" as const,
+          definition,
+          definitionId: Identity.definition(definition),
+          input: json,
+          inputId: Identity.input(images.length === 0 ? json : { state: json, images: images.map(({ format, dataBase64 }) => ({ format, digest: Identity.sha256(dataBase64) })) }),
+          ...(images.length > 0 ? { images } : {}),
+          ...(options.requireNativeAbstention === true ? { requireNativeAbstention: true as const } : {})
+        }
+      },
+      catch: (cause) => new PreparationError({
+        definition: definition.name,
+        message: `${definition.name}: invalid image input`,
+        hint: "Pass PNG or JPEG image bytes as canonical padded base64",
+        cause
+      })
+    })),
     Effect.withSpan("Decision.prepare", { attributes: { "decision.name": definition.name } })
   ) as Effect.Effect<Prepared<D>, PreparationError, D["input"]["EncodingServices"]>
 
 const VALUE: Readonly<Record<string, string>> = {
+  box: "normalized bounding box",
   boolean: "probability of true, 0..1",
   choice: "one of outcomes",
   score: "expected 0-based level index, 0..levels-1"

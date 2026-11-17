@@ -15,14 +15,16 @@ import type * as Codec from "../wire/Codec.ts"
 import type * as Decision from "../domain/Decision.ts"
 import * as Deployment from "../providers/deployment.ts"
 import * as Identity from "../domain/Identity.ts"
-import type { Json } from "../wire/Json.ts"
-import { codec as openAiDecisions } from "../providers/openai/codec.ts"
+import type { Json, JsonObject } from "../wire/Json.ts"
 import type * as Question from "../domain/Question.ts"
-import { codec as classifierDev } from "../providers/classifier-dev/codec.ts"
-import { codec as respan } from "../providers/respan/codec.ts"
-import { codec as systemOne } from "../wire/SystemOne.ts"
 import * as Wire from "../wire/Wire.ts"
 import * as Capabilities from "../providers/Capabilities.ts"
+import * as ContextLimits from "./ContextLimits.ts"
+import * as RequestFeatures from "./RequestFeatures.ts"
+import { batchCalls } from "./BatchCalls.ts"
+import { codecFor } from "./Codecs.ts"
+
+export { codecFor } from "./Codecs.ts"
 
 /**
  * Named permissions to change how a decision is sent.
@@ -73,6 +75,8 @@ export interface Call {
   readonly spec: Codec.CallSpec
   /** The exact body that will be sent. */
   readonly body: string
+  readonly headers?: Readonly<Record<string, string>>
+  readonly context?: ContextLimits.Check
   /** UTF-8 length of `body`. */
   readonly bytes: number
 }
@@ -88,6 +92,7 @@ export interface DecisionPlan {
   readonly provider: string
   readonly model: string
   readonly codec: string
+  readonly request?: JsonObject
   readonly lowerings: ReadonlyArray<AppliedLowering>
   /** How question ids appear on the wire. @since 0.2.0 */
   readonly wireIds: WireIds
@@ -123,17 +128,7 @@ export class PlanError extends Data.TaggedError("PlanError")<{
   readonly hint: string
 }> {}
 
-const codecs: { readonly [K in Deployment.Codec]: Codec.Codec } = {
-  "system-one": systemOne,
-  "openai-decisions": openAiDecisions,
-  respan,
-  "classifier-dev": classifierDev
-}
 
-/** The codec a deployment speaks. @since 0.1.0 */
-export const codecFor = (d: Deployment.Snapshot): Codec.Codec => codecs[d.codec]
-
-const utf8 = new TextEncoder()
 const isStructured = (x: Question.Description | null | undefined): boolean => x !== null && x !== undefined && typeof x !== "string"
 const text = (x: Question.Description): string => (typeof x === "string" ? x : Wire.stringify(x))
 
@@ -196,6 +191,10 @@ export const plan = (
 
   // 1. Primitive support and bounds.
   for (const [id, q] of def.questions) {
+    if (q.kind === "box" && (deployment.codec !== "typesafe-system-one" ||
+      !RequestFeatures.available(capabilities, "box") || !prepared.images?.length)) {
+      return fail("unsupported", `question "${id}" requires an image and a Box-capable Jev model`, "Use Jev 1.14 with an image")
+    }
     const problems = Deployment.fits(deployment, q)
     if (problems.length > 0) return fail("unsupported", `question "${id}": ${problems.join("; ")}`, "Use a deployment that supports this question, or change the definition")
     if (q.kind === "boolean" && (q as Question.BooleanQuestion).criteria !== undefined && !deployment.booleanCriteria) {
@@ -250,45 +249,24 @@ export const plan = (
 
   // 4. Partition and encode; check each final call.
   const codec = codecFor(deployment)
-  const constraints = codec.preflight?.({ model, state, questions: def.questions.map(lowered).map(([id, question]) => ({ id, question })) }) ?? []
+  const selected = RequestFeatures.select(prepared, deployment, capabilities, codec)
+  if (Result.isFailure(selected)) return fail(selected.failure.reason, selected.failure.problem, selected.failure.hint)
+  const { spec: features, headers, summary: request } = selected.success
+  const base = { model, state, ...features }
+  const questions = (entries: ReadonlyArray<Decision.Entry>) =>
+    entries.map(lowered).map(([id, question]) => ({ id, question }))
+  const constraints = codec.preflight?.({ ...base, questions: questions(def.questions) }) ?? []
   if (constraints.length > 0) {
     return fail("provider-constraint", constraints.map((c) => c.problem).join("; "), [...new Set(constraints.map((c) => c.hint))].join("; "))
   }
-  const qLimit = deployment.limits.questionsPerCall
-  const bLimit = deployment.limits.bodyBytes
-  const encode = (entries: ReadonlyArray<Decision.Entry>) => {
-    const spec: Codec.CallSpec = { model, state, questions: entries.map(lowered).map(([id, question]) => ({ id, question })) }
-    const body = Wire.stringify(codec.encode(spec))
-    return { questionIds: entries.map(([id]) => id), spec, body, bytes: utf8.encode(body).length }
-  }
-  type Encoded = ReturnType<typeof encode>
-  const out: Array<Encoded> = []
-  const place = (entries: ReadonlyArray<Decision.Entry>): PlanError | undefined => {
-    if (qLimit !== "unknown" && entries.length > qLimit.value) {
-      if (!splittable) return new PlanError({ definition: def.name, deployment: key, reason: "too-large", message: `${def.name} on ${key}: ${entries.length} questions in one atomic group; at most ${qLimit.value}`, hint: "Split the definition" })
-      for (let i = 0; i < entries.length; i += qLimit.value) {
-        const e = place(entries.slice(i, i + qLimit.value))
-        if (e) return e
-      }
-      return undefined
-    }
-    const c = encode(entries)
-    if (bLimit !== "unknown" && c.bytes > bLimit.value) {
-      if (!splittable || entries.length === 1) {
-        return new PlanError({ definition: def.name, deployment: key, reason: "too-large", message: `${def.name} on ${key}: a call of ${c.bytes} bytes exceeds ${bLimit.value} (${bLimit.evidence})`, hint: "Shorten the input or the question texts" })
-      }
-      const mid = Math.ceil(entries.length / 2)
-      return place(entries.slice(0, mid)) ?? place(entries.slice(mid))
-    }
-    out.push(c)
-    return undefined
-  }
-  for (const g of groups) {
-    const e = place(g)
-    if (e) return Result.fail(e)
-  }
+  const stateProblem = ContextLimits.stateProblem(state, deployment.limits.stateChars)
+  if (stateProblem !== undefined) return fail("too-large", stateProblem, "Shorten the state")
+  const batch = batchCalls({ deployment, codec, base, headers, questions, groups, splittable })
+  if (Result.isFailure(batch)) return fail("too-large", batch.failure.message, batch.failure.hint)
+  const out = batch.success
 
   // 5. Identity, call ids, warnings.
+  const hasRequest = Object.keys(request).length > 0
   const fingerprint = Identity.execution({
     definition: prepared.definitionId,
     input: prepared.inputId,
@@ -296,9 +274,15 @@ export const plan = (
     deployment: key,
     model,
     capabilities: Capabilities.fingerprint(capabilities),
+    ...(hasRequest ? { request } : {}),
     lowerings: [...lowerings.map((l) => l.name), ...(wireIds === "neutral" ? ["neutral-ids"] : [])]
   })
   const warnings = [
+    ...(out.some((call) => call.context.requestEstimate !== undefined)
+      ? ["Context sizing uses a UTF-8 byte heuristic and is not a provider token count"] : []),
+    ...(out.some((call) => call.context.imageTokensUnknown)
+      ? ["Image token cost is unknown and excluded from context estimates"] : []),
+    ...(deployment.mayTruncateState ? ["Provider may truncate text state when context is exceeded"] : []),
     ...Object.entries(deployment.limits).filter(([, l]) => l === "unknown").map(([n]) => `${n} limit unknown for ${key}`),
     ...(deployment.toleranceSource === "assumed" ? [`probability tolerance ${deployment.tolerance} is assumed for ${key}`] : [])
   ]
@@ -312,6 +296,7 @@ export const plan = (
     provider: deployment.provider,
     model,
     codec: `${codec.id}@${codec.version}`,
+    ...(hasRequest ? { request } : {}),
     lowerings,
     wireIds,
     calls: out.map((c, index) => ({ ...c, index, callId: `call-${Identity.sha256(`${fingerprint}:${index}`).slice(0, 12)}-${index}` })),
@@ -335,6 +320,7 @@ export const preview = (p: DecisionPlan, options: { readonly bodies?: boolean } 
   provider: p.provider,
   model: p.model,
   codec: p.codec,
+  ...(p.request === undefined ? {} : { request: p.request }),
   fingerprint: p.fingerprint,
   lowerings: p.lowerings.map((l) => ({ name: l.name, questionIds: [...l.questionIds] })),
   wireIds: p.wireIds,
@@ -343,6 +329,8 @@ export const preview = (p: DecisionPlan, options: { readonly bodies?: boolean } 
     callId: c.callId,
     questionIds: [...c.questionIds],
     bytes: c.bytes,
+    ...(c.context?.requestEstimate === undefined ? {} : { context: { ...c.context } }),
+    ...(c.headers === undefined ? {} : { requestHeaders: { ...c.headers } }),
     ...(options.bodies === true ? { body: c.body } : {})
   }))
 })

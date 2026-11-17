@@ -13,7 +13,7 @@ import { ASSUMED_TOLERANCE, core, exact } from "../deployment-defaults.ts"
 export const fastino: Snapshot = {
   _tag: "DeploymentSnapshot",
   id: "fastino",
-  version: "2026-10-18",
+  version: "2026-11-17",
   provider: "fastino",
   codec: "system-one",
   envelope: "none",
@@ -32,7 +32,8 @@ export const fastino: Snapshot = {
   limits: {
     questionsPerCall: "unknown",
     bodyBytes: "unknown",
-    requestTokens: exact(40_000, "per rendered prompt (state + one question), not per request"),
+    requestTokens: "unknown",
+    questionTokens: exact(40_000, "per rendered prompt (state + one question), not per request"),
     stateChars: "unknown"
   },
   tolerance: ASSUMED_TOLERANCE,

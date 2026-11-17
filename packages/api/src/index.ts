@@ -3,13 +3,14 @@
  *
  * @since 0.1.0
  */
-export const version = "0.2.0" as const
+export const version = "0.3.0" as const
 
 export * as Answer from "./domain/Answer.ts"
 export * as Decision from "./domain/Decision.ts"
 export * as Evidence from "./domain/Evidence.ts"
 export * as Q from "./domain/Question.ts"
 export type { Json, JsonArray, JsonObject } from "./wire/Json.ts"
+export type { Input as ImageInput } from "./domain/Image.ts"
 export * as Identity from "./domain/Identity.ts"
 export * as Wire from "./wire/Wire.ts"
 export * as Validate from "./domain/Validate.ts"

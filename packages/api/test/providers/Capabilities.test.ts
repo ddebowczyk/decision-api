@@ -90,7 +90,7 @@ describe("provider + model capabilities", () => {
   it("distinguishes provider support from implemented adapter support", () => {
     const sage = Capabilities.get(Capabilities.builtIn, "levanto", "levanto-sage-2")!
     assert.strictEqual(sage.features["reasoning"]!.support, "supported")
-    assert.strictEqual(sage.features["reasoning"]!.adapterSupport, "unsupported")
+    assert.strictEqual(sage.features["reasoning"]!.adapterSupport, "supported")
     assert.strictEqual(sage.features["streaming"]!.support, "supported")
     assert.deepStrictEqual(Deployment.fits(Provider.levanto().deployment, Q.boolean("Safe?")), [])
   })

@@ -53,7 +53,7 @@ Answers that are refused or invalid are values in the result. Failures of the ca
 | `Fallback` | `make(...engines)` and `run(chain)`. Each step makes one attempt and the answers never mix providers |
 | `Ledger` | Every attempt: status, request id, duration, usage, error. `Ledger.capture(effect)` |
 | `Errors` | `explain(error)`: `{ tag, message, hint, retryable }` for any error the library raises; `classify(error)`: `unavailable`, `exhausted` (budget), `rejected` or `misconfigured`, with `source` and HTTP `status` |
-| `Bridge` | Serves `effect/ai`'s `DecisionModel` from the current `Engine`. Each question settles on its own: a refusal is an upstream `Refusal`, an invalid answer is left out; status, problem and origin are in `metadata["@decisions/api"]` (`Bridge.metadataOf`) |
+| `Bridge` | Serves `effect/ai`'s `DecisionModel` from the current `Engine`. Each question settles on its own: a refusal is an upstream `Refusal`, while abstentions and invalid answers are upstream `Missing`. The original status, problem and origin are in `metadata["@decisions/api"]` (`Bridge.metadataOf`) |
 
 ## Configuration
 
@@ -61,7 +61,7 @@ Keys and URL parameters come from `Config` (the variables in the table below) wh
 
 ```ts
 Provider.typesafe({
-  model: "jev-1.13.0",              // pin it; "jev-latest" is an alias
+  model: "jev-1.14.0",              // pin it; "jev-latest" is an alias
   longContext: true,                // opt-in header for large states
   retry: { times: 3, base: "500 millis", max: "20 seconds" },
   timeout: "30 seconds",
@@ -91,15 +91,30 @@ Providers differ, and the planner fails rather than hiding a difference. Perplex
 
 Each preset's snapshot (`Deployment.<name>`) lists its limits, tolerance, retryable statuses and the official sources it was built from.
 
-Levanto support is partial, using the documented [SystemOne API](https://docs.levanto.ai/systemone.md).
-`Engine.layerFor(Provider.levanto())` supports boolean, choice and score questions,
-including object or array state. Structured descriptions need `allow: ["stringify-description"]`.
-SystemOne always returns an answer; apply your own probability threshold if needed.
-Levanto's native `/decide` abstentions, Sort, Tags, images, grounding, reasoning,
-extraction and streaming are not exposed by this preset.
-The [full capability audit](../../research/provider-docs/sources/levanto/README.md#full-capability-audit)
-also identifies missing native scale units, accuracy/latency controls, estimates,
-catalog helpers and metadata, plus an unverified question-isolation assumption.
+## Images and provider-specific decisions
+
+Pass ordered PNG or JPEG images with the prepared input. For example, a
+decision named `visualQuestion` can use the same PNG with Jev or Clef.
+
+```ts
+Engine.decide(visualQuestion, "Inspect the attached image.", {
+  images: [{ format: "png", dataBase64 }]
+})
+```
+
+Use a pinned Jev 1.14 or 1.13 deployment, or Clef or Clef Flash configured
+with `allow: ["split-for-isolation"]` for independent questions. Jev 1.14
+also supports `Q.box(instructions)`, which returns normalized bounding-box
+edges. The planner rejects incompatible image inputs before HTTP, including
+during fallbacks. The Effect AI bridge currently handles text questions.
+
+`Provider.levanto({ mode: "native", reasoning: "on" })` selects native Sage
+with typed reasoning (`"off"`, `"auto"` or `"on"`). To require native
+abstention for boolean or choice questions, pass
+`{ requireNativeAbstention: true }` to `Engine.decide`. A provider
+abstention appears as `status: "abstained"`. Sage's default SystemOne endpoint
+supports reasoning and always returns a result. Structured descriptions on
+SystemOne require `allow: ["stringify-description"]`.
 
 ## Capabilities by provider and model
 
@@ -162,19 +177,20 @@ declarations too. Code declarations can use `satisfies Capabilities.Declaration`
 Features have independent `support` and `adapterSupport` values:
 `supported`, `unsupported` or `unknown`, plus optional JSON `constraints`.
 Applications can add feature names without changing the library. An absent name
-means unknown. This describes provider capabilities beyond the adapter: Sage's
-reasoning, extraction and streaming are recorded as supported by the provider
-and unsupported by this adapter. Metadata changes do not implement codecs or
-enable request options by themselves.
+means unknown. For example, Sage exposes extraction and streaming upstream,
+while this adapter implements typed reasoning and native abstention for its
+supported question kinds. Enabling a request option also requires a codec
+that implements it.
 
 Providers select capabilities at construction. To apply changes, build a new
 provider/engine with the updated catalog; no shared global registry is mutated.
 Planning, answer validation and retry use the selected capabilities. Plans and
 `Planner.preview` expose the exact declaration, and execution fingerprints hash
 its content even when its version is unchanged. Engines reject older plans
-before HTTP. Token and state-character bounds remain descriptive; question-count
-and body-byte bounds are enforced by the planner, along with primitive support,
-grouping, description/state support and codec-specific constraints.
+before HTTP. The planner enforces documented state-character, question-count and body-byte
+bounds. It checks per-question and request-wide context limits with a UTF-8
+byte heuristic. Preview reports these estimates, possible provider truncation
+and any image token costs missing from the estimate.
 
 Run `just example capabilities` for an offline example.
 
@@ -212,7 +228,8 @@ route(ticket).pipe(Effect.provide(FakeEngine.layer({ team: FakeEngine.refused("p
 | `just example preview` | Definition and plans as JSON. No network |
 | `just example testing` | Application code tested with `FakeEngine` |
 | `just example triage` | Live: TypeSafe with a fallback to OpenAI (needs keys in `.env`) |
+| `just example sage-reasoning` | Live: paired Sage reasoning comparison on synthetic examples |
 | `just gate` | Type-check plus the offline suite |
 | `just live` | Live provider suite (costs money; skips any provider without a key) |
 
-The agent guide is in [AGENTS.md](AGENTS.md).
+See [AGENTS.md](AGENTS.md) for the agent guide and the [operations guide](../../ops/README.md) for versioning, packaging and release commands.

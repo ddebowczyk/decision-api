@@ -16,6 +16,8 @@ import * as Wire from "./Wire.ts"
 
 const encodeQuestion = (q: Question.Any): Wire.Value => {
   switch (q.kind) {
+    case "box":
+      return Wire.obj([["type", "box"], ["instructions", q.instructions]])
     case "boolean": {
       const c = (q as Question.BooleanQuestion).criteria
       const criteria = c === undefined
@@ -70,6 +72,8 @@ const decodeAnswer = (q: Question.Any, raw: unknown): Codec.DecodedAnswer => {
     return { _tag: "Malformed", problem: `expected a ${expected} answer, got ${String(raw["type"])}`, native }
   }
   switch (q.kind) {
+    case "box":
+      return { _tag: "Candidate", candidate: { box: raw["box"] }, native }
     case "boolean": {
       const p = raw["noul"]
       if (typeof p !== "number") return { _tag: "Malformed", problem: "noul is not a number", native }
@@ -108,15 +112,18 @@ const usageOf = (u: { readonly [k: string]: unknown } | undefined): Codec.Usage 
  *
  * @since 0.1.0
  */
-export const codec: Codec.Codec = {
-  id: "system-one",
-  version: "1",
-  encode: (spec) =>
+export const encode = (spec: Codec.CallSpec, extra: ReadonlyArray<readonly [string, Wire.Value]> = []): Wire.Value =>
     Wire.obj([
       ["model", spec.model],
       ["state", spec.state],
-      ["questions", Wire.obj(spec.questions.map(({ id, question }) => [id, encodeQuestion(question)]))]
-    ]),
+      ["questions", Wire.obj(spec.questions.map(({ id, question }) => [id, encodeQuestion(question)]))],
+      ...extra
+    ])
+
+export const codec: Codec.Codec = {
+  id: "system-one",
+  version: "1",
+  encode,
   decode: (spec, body) => {
     const r = decodeEnvelope(body)
     if (Result.isFailure(r)) return Result.fail(new Codec.CodecError({ codec: "system-one", message: r.failure.message }))

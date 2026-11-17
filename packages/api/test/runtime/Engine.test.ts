@@ -1,7 +1,7 @@
 import { assert, describe, expectTypeOf, it } from "@effect/vitest"
 import { ConfigProvider, Effect, Layer, Metric, Redacted, Tracer } from "effect"
 import { type Answer, Decision, Engine, Ledger, Metrics } from "../../src/index.ts"
-import { Provider } from "../../src/providers/index.ts"
+import { Deployment, Provider } from "../../src/providers/index.ts"
 import { ScriptedHttp } from "../../src/testing/index.ts"
 import { Triage, triageInput } from "../fixtures/triage.ts"
 import { perplexityOne, typesafeTriage } from "../fixtures/triage-replies.ts"
@@ -96,7 +96,7 @@ describe("Engine.decide", () => {
 
   it.effect("records call, token and answer metrics", () =>
     Effect.gen(function*() {
-      const attrs = { deployment: "typesafe@2026-10-18" }
+      const attrs = { deployment: Deployment.key(Deployment.typesafe) }
       const before = yield* Metric.value(Metric.withAttributes(Metrics.calls, { ...attrs, outcome: "ok" }))
       yield* Engine.decide(Triage, triageInput)
       const after = yield* Metric.value(Metric.withAttributes(Metrics.calls, { ...attrs, outcome: "ok" }))
@@ -185,7 +185,7 @@ describe("Engine plan and layer", () => {
   it.effect("reads the credential from config", () =>
     Effect.gen(function*() {
       const p = yield* Engine.plan(Triage, triageInput)
-      assert.strictEqual(p.deployment, "typesafe@2026-10-18")
+      assert.strictEqual(p.deployment, Deployment.key(Deployment.typesafe))
     }).pipe(
       Effect.provide(engine(Provider.typesafe(), [{ status: 500 }])),
       Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: { TYPESAFE_API_KEY: "from-env" } })))

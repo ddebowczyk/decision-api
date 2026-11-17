@@ -17,7 +17,7 @@ export type LimitEvidence = "exact" | "conservative-bound" | "estimate"
 export type Limit = { readonly value: number; readonly evidence: LimitEvidence; readonly note?: string } | "unknown"
 
 /** @since 0.1.0 */
-export type Codec = "system-one" | "openai-decisions" | "respan" | "classifier-dev"
+export type Codec = "system-one" | "typesafe-system-one" | "clef-system-one" | "levanto-system-one" | "levanto-native-batch" | "openai-decisions" | "respan" | "classifier-dev"
 
 /**
  * What wraps the codec's body on the wire. `cloudflare`: the v4 API envelope
@@ -52,6 +52,8 @@ export interface Primitive {
   readonly maxOutcomes: Limit
 }
 
+export type Reasoning = "off" | "auto" | "on"
+
 /** @since 0.1.0 */
 export interface Snapshot {
   readonly _tag: "DeploymentSnapshot"
@@ -68,6 +70,9 @@ export interface Snapshot {
   /** May contain `{model}`, replaced per call with the URL-encoded model. */
   readonly path: string
   readonly defaultModel: string
+  readonly request?: { readonly longContext?: true; readonly reasoning?: Reasoning }
+  readonly mayTruncateState?: true
+  readonly pinnedModels?: ReadonlyArray<string>
   /** Known aliases and what they resolve to; `null` when the provider does not say. */
   readonly aliases: { readonly [alias: string]: string | null }
   readonly grouping: Grouping
@@ -83,6 +88,7 @@ export interface Snapshot {
     readonly questionsPerCall: Limit
     readonly bodyBytes: Limit
     readonly requestTokens: Limit
+    readonly questionTokens?: Limit
     readonly stateChars: Limit
   }
   /** Rounding tolerance for distribution mass, see `Validate`. */

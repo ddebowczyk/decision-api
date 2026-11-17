@@ -5,6 +5,7 @@
  *
  * @since 0.1.0
  */
+import type { Box } from "./Box.ts"
 import type * as Evidence from "./Evidence.ts"
 import type { JsonArray, JsonObject } from "../wire/Json.ts"
 
@@ -79,6 +80,9 @@ export interface ChoiceQuestion<L extends string>
 export interface ScoreQuestion<Lv extends string> extends Question<"score", number, Evidence.FiniteDistribution<Lv>> {
   readonly levels: ReadonlyArray<Option<Lv>>
 }
+
+export const box = (instructions: Description): Question<"box", Box, Evidence.Spatial> =>
+  ({ kind: "box", version: "1", instructions })
 
 /** An option given as a bare label or a `[label, description]` pair. */
 type OptionInput<L extends string> = L | readonly [L, Description | null]

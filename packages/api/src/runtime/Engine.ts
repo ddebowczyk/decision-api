@@ -10,6 +10,7 @@ import { Clock, type Config, Context, Data, Duration, Effect, Layer, Metric, Red
 import * as AiError from "effect/ai/AiError"
 import type { HttpClient } from "effect/http"
 import type * as Answer from "../domain/Answer.ts"
+import { assembleAnswers } from "./Answers.ts"
 import * as Budget from "./Budget.ts"
 import type * as Codec from "../wire/Codec.ts"
 import * as Decision from "../domain/Decision.ts"
@@ -50,7 +51,7 @@ export class DecisionIncomplete extends Data.TaggedError("DecisionIncomplete")<{
   readonly definition: string
   readonly message: string
   readonly hint: string
-  readonly problems: ReadonlyArray<{ readonly questionId: string; readonly status: "refused" | "error"; readonly detail: string | null }>
+  readonly problems: ReadonlyArray<{ readonly questionId: string; readonly status: "refused" | "abstained" | "error"; readonly detail: string | null }>
   readonly result: DecisionResult
 }> {}
 
@@ -201,66 +202,28 @@ export const make = (provider: Provider.Provider) =>
         )
       })
 
-    const assemble = <D extends Decision.Any>(
-      prepared: Decision.Prepared<D>,
-      p: Planner.DecisionPlan,
-      results: ReadonlyArray<{ readonly call: Planner.Call; readonly decoded: Codec.Decoded; readonly attempt: number }>
-    ) => {
-      const answers: Record<string, Answer.Any> = {}
-      for (const { call, decoded, attempt: n } of results) {
-        const reported = decoded.reportedModel
-        const resolvedModel = reported === null || (reported === p.model && p.model in deployment.aliases) ? null : reported
-        for (const [i, id] of call.questionIds.entries()) {
-          const question = Decision.question(prepared.definition, id)
-          const origin: Answer.Origin = {
-            questionId: id,
-            callId: call.callId,
-            attempt: n,
-            provider: deployment.provider,
-            deployment: key,
-            requestedModel: p.model,
-            resolvedModel,
-            lowerings: p.lowerings.filter((l) => l.questionIds.length === 0 || l.questionIds.includes(id)).map((l) => l.name)
-          }
-          const d = decoded.answers.get(call.spec.questions[i]!.id)
-          const empty = { confidence: undefined, fields: {} }
-          answers[id] = d === undefined
-            ? { status: "error", problem: "no answer in the response", origin, native: empty }
-            : d._tag === "Refused"
-            ? { status: "refused", reason: d.reason, origin, native: d.native }
-            : d._tag === "Malformed"
-            ? { status: "error", problem: d.problem, origin, native: d.native }
-            : (() => {
-              const v = Validate.answer(question, d.candidate, deployment.tolerance)
-              return v._tag === "Valid"
-                ? { status: "answered", value: v.value, evidence: v.evidence, corrections: v.corrections, origin, native: d.native }
-                : { status: "error", problem: v.problem, origin, native: d.native }
-            })()
-        }
-      }
-      return answers as unknown as Decision.Answers<D>
-    }
-
-    const execute = <D extends Decision.Any>(prepared: Decision.Prepared<D>, p: Planner.DecisionPlan) =>
+    const execute = <D extends Decision.Any>(prepared: Decision.Prepared<D>, requested: Planner.DecisionPlan) =>
       Effect.gen(function*() {
         const expected = yield* Effect.result(plan(prepared))
-        if (p.deployment !== key || Result.isFailure(expected) || p.fingerprint !== expected.success.fingerprint) {
+        if (requested.deployment !== key || Result.isFailure(expected) || requested.fingerprint !== expected.success.fingerprint) {
           return yield* Effect.fail(
             new Planner.PlanError({
               definition: prepared.definition.name,
               deployment: key,
               reason: "stale-plan",
-              message: `${prepared.definition.name}: plan ${p.fingerprint} was made for ${p.deployment} or another input`,
+              message: `${prepared.definition.name}: plan ${requested.fingerprint} was made for ${requested.deployment} or another input`,
               hint: "Plan again with this engine and this prepared input"
             })
           )
         }
+        const p = expected.success
+        yield* Effect.annotateCurrentSpan("decision.calls", p.calls.length)
         const [results, attempts] = yield* Ledger.capture(
           Effect.forEach(p.calls, (call) => withRetry(p, call).pipe(Effect.map((r) => ({ call, ...r }))), {
             concurrency: provider.concurrency
           })
         )
-        const answers = assemble(prepared, p, results)
+        const answers = assembleAnswers(prepared.definition, p, deployment, results)
         for (const a of Object.values(answers) as ReadonlyArray<Answer.Any>) {
           yield* Metric.update(Metric.withAttributes(Metrics.answers, { ...attrs, status: a.status }), 1)
         }
@@ -282,7 +245,7 @@ export const make = (provider: Provider.Provider) =>
       }).pipe(
         Effect.annotateLogs({ decision: prepared.definition.name, deployment: key }),
         Effect.withSpan("Engine.execute", {
-          attributes: { "decision.name": prepared.definition.name, "decision.deployment": key, "decision.calls": p.calls.length }
+          attributes: { "decision.name": prepared.definition.name, "decision.deployment": key }
         })
       )
 
@@ -306,10 +269,10 @@ export const layerFor = (provider: Provider.Provider): Layer.Layer<Engine, Confi
  *
  * @since 0.1.0
  */
-export const plan = <D extends Decision.Any>(definition: D, input: Decision.Input<D>) =>
+export const plan = <D extends Decision.Any>(definition: D, input: Decision.Input<D>, options?: Decision.PrepareOptions) =>
   Effect.gen(function*() {
     const engine = yield* Engine
-    const prepared = yield* Decision.prepare(definition, input)
+    const prepared = yield* Decision.prepare(definition, input, options)
     return yield* engine.plan(prepared)
   }).pipe(Effect.withSpan("Engine.plan", { attributes: { "decision.name": definition.name } }))
 
@@ -325,7 +288,8 @@ export const plan = <D extends Decision.Any>(definition: D, input: Decision.Inpu
  */
 export const decide = <D extends Decision.Any>(
   definition: D,
-  input: Decision.Input<D>
+  input: Decision.Input<D>,
+  options?: Decision.PrepareOptions
 ): Effect.Effect<
   DecisionResult<D>,
   Decision.PreparationError | Planner.PlanError | AiError.AiError | Budget.BudgetExhausted,
@@ -333,7 +297,7 @@ export const decide = <D extends Decision.Any>(
 > =>
   Effect.gen(function*() {
     const engine = yield* Engine
-    const prepared = yield* Decision.prepare(definition, input)
+    const prepared = yield* Decision.prepare(definition, input, options)
     const p = yield* engine.plan(prepared)
     yield* Effect.annotateCurrentSpan({ "decision.fingerprint": p.fingerprint, "decision.deployment": p.deployment })
     return yield* engine.execute(prepared, p)
@@ -349,12 +313,12 @@ export const decide = <D extends Decision.Any>(
  *
  * @since 0.1.0
  */
-export const decideAll = <D extends Decision.Any>(definition: D, input: Decision.Input<D>) =>
-  decide(definition, input).pipe(
+export const decideAll = <D extends Decision.Any>(definition: D, input: Decision.Input<D>, options?: Decision.PrepareOptions) =>
+  decide(definition, input, options).pipe(
     Effect.flatMap((result) => {
       const entries = Object.entries(result.answers as Record<string, Answer.Any>)
       const problems = entries.flatMap(([questionId, a]) =>
-        a.status === "answered" ? [] : [{ questionId, status: a.status, detail: a.status === "refused" ? a.reason : a.problem }]
+        a.status === "answered" ? [] : [{ questionId, status: a.status, detail: a.status === "error" ? a.problem : a.reason }]
       )
       if (problems.length > 0) {
         return Effect.fail(

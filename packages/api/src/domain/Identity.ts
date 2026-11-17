@@ -112,6 +112,7 @@ export const input = (encoded: Wire.Value): string => tagged("inp1", encoded)
  */
 export interface ExecutionParts {
   readonly capabilities?: string
+  readonly request?: Wire.Value
   readonly definition: string
   readonly input: string
   readonly provider: string

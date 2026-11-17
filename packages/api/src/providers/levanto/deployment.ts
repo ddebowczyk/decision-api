@@ -12,9 +12,9 @@ import { ASSUMED_TOLERANCE, bearer, core, exact } from "../deployment-defaults.t
 export const levanto: Snapshot = {
   _tag: "DeploymentSnapshot",
   id: "levanto",
-  version: "2026-11-03",
+  version: "2026-11-17",
   provider: "levanto",
-  codec: "system-one",
+  codec: "levanto-system-one",
   envelope: "none",
   auth: bearer,
   baseUrl: "https://sage.levanto.ai",
@@ -39,4 +39,17 @@ export const levanto: Snapshot = {
     "https://docs.levanto.ai/decision-model/batch.md",
     "https://docs.levanto.ai/decision-model/limits.md"
   ]
+}
+
+/** Sage's native batch operation can abstain on yes/no and choice questions. */
+export const levantoNative: Snapshot = {
+  ...levanto,
+  id: "levanto-native",
+  codec: "levanto-native-batch",
+  path: "/decide/batch",
+  aliases: {},
+  structuredState: false,
+  booleanCriteria: false,
+  verification: "documented",
+  sources: ["https://sage.levanto.ai/openapi.json", "https://docs.levanto.ai/decision-model/batch.md"]
 }

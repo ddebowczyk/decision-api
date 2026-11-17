@@ -171,7 +171,8 @@ export const send = Effect.fn("Transport.send")(function*(
   yield* Effect.annotateCurrentSpan({ "decision.deployment": Deployment.key(deployment), "decision.call": call.callId, "http.request.body.size": call.bytes })
   let request = HttpClientRequest.post(url).pipe(
     HttpClientRequest.bodyText(call.body, "application/json"),
-    HttpClientRequest.setHeaders(options.headers ?? {})
+    HttpClientRequest.setHeaders(options.headers ?? {}),
+    HttpClientRequest.setHeaders(call.headers ?? {})
   )
   if (options.apiKey !== undefined) {
     request = deployment.auth.scheme === "bearer"

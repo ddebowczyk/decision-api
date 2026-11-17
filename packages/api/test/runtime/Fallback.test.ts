@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Effect, Redacted } from "effect"
 import { Budget, Engine, Fallback } from "../../src/index.ts"
-import { Provider } from "../../src/providers/index.ts"
+import { Deployment, Provider } from "../../src/providers/index.ts"
 import { ScriptedHttp } from "../../src/testing/index.ts"
 import { Triage, triageInput } from "../fixtures/triage.ts"
 import { typesafeTriage } from "../fixtures/triage-replies.ts"
@@ -37,14 +37,14 @@ describe("Fallback", () => {
       const team = r.answers.team
       assert.isTrue(team.status === "answered" && team.value === "technical")
       for (const a of Object.values(r.answers)) assert.strictEqual(a.origin.deployment, "openai@2026-10-18")
-      assert.deepStrictEqual(r.attempts.map((a) => [a.deployment, a.outcome]), [["typesafe@2026-10-18", "failed"], ["openai@2026-10-18", "ok"]])
+      assert.deepStrictEqual(r.attempts.map((a) => [a.deployment, a.outcome]), [[Deployment.key(Deployment.typesafe), "failed"], ["openai@2026-10-18", "ok"]])
       assert.deepStrictEqual(yield* hosts, ["api.typesafe.ai", "api.openai.com"])
     }).pipe(Effect.provide(byHost({ "api.typesafe.ai": { status: 401, body: Fixture.json("typesafe-401") }, "api.openai.com": { status: 200, body: openaiTriage } }))))
 
   it.effect("the first engine answering means the rest are never built or called", () =>
     Effect.gen(function*() {
       const r = yield* Engine.decide(Triage, triageInput).pipe(Fallback.run(Fallback.make(typesafe(), openai())))
-      assert.strictEqual(r.deployment, "typesafe@2026-10-18")
+      assert.strictEqual(r.deployment, Deployment.key(Deployment.typesafe))
       assert.deepStrictEqual(yield* hosts, ["api.typesafe.ai"])
     }).pipe(Effect.provide(byHost({ "api.typesafe.ai": { status: 200, body: typesafeTriage } }))))
 
@@ -62,7 +62,7 @@ describe("Fallback", () => {
       const e = yield* Effect.flip(Engine.decide(Triage, triageInput).pipe(Fallback.run(Fallback.make(perplexity(), typesafe()))))
       assert.isTrue(e._tag === "PlanError" && e.reason === "isolation-required")
       const r = yield* Engine.decide(Triage, triageInput).pipe(Fallback.run(Fallback.make({ on: ["isolation-required"] }, perplexity(), typesafe())))
-      assert.strictEqual(r.deployment, "typesafe@2026-10-18")
+      assert.strictEqual(r.deployment, Deployment.key(Deployment.typesafe))
     }).pipe(Effect.provide(byHost({ "api.typesafe.ai": { status: 200, body: typesafeTriage } }))))
 
   it.effect("incomplete answers do not fall back", () =>
@@ -98,7 +98,7 @@ describe("Fallback", () => {
         Fallback.run(Fallback.make(basal(), TypeSafe)),
         Effect.provide(TypeSafe)
       )
-      assert.strictEqual(r.deployment, "typesafe@2026-10-18")
+      assert.strictEqual(r.deployment, Deployment.key(Deployment.typesafe))
       assert.deepStrictEqual(yield* hosts, ["localhost:8000", "api.typesafe.ai"])
     }).pipe(Effect.provide(byHost({ "localhost:8000": { transport: "refused" }, "api.typesafe.ai": { status: 200, body: typesafeTriage } }))))
 })

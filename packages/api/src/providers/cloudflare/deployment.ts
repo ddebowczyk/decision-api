@@ -24,9 +24,9 @@ const clefSources = [
 export const clef: Snapshot = {
   _tag: "DeploymentSnapshot",
   id: "clef",
-  version: "2026-10-18",
+  version: "2026-11-17",
   provider: "cloudflare",
-  codec: "system-one",
+  codec: "clef-system-one",
   envelope: "cloudflare",
   auth: bearer,
   baseUrl: "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai",
@@ -38,6 +38,7 @@ export const clef: Snapshot = {
   primitives: core(exact(255), exact(10)),
   structuredDescriptions: true,
   structuredState: true,
+  mayTruncateState: true,
   booleanCriteria: true,
   limits: {
     questionsPerCall: exact(64),

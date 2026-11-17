@@ -1,6 +1,6 @@
 export * from "./deployment.ts"
 
-export { levanto } from "./levanto/deployment.ts"
+export { levanto, levantoNative } from "./levanto/deployment.ts"
 export { typesafe } from "./typesafe/deployment.ts"
 export { basal } from "./basal/deployment.ts"
 export { perplexity } from "./perplexity/deployment.ts"
