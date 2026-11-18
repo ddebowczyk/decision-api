@@ -1,30 +1,31 @@
 set dotenv-load := true
 set positional-arguments := true
 
+mod ops
+
 api := "packages/api"
 
 # list recipes
 default:
-    @just --list
+    @just --list --list-submodules
 
 # install dependencies
 install:
     pnpm install
 
 # type-check the library, tests and examples
-check:
-    cd {{api}} && pnpm exec tsc -p tsconfig.json --noEmit
+check: ops::quality::check
 
 # run the offline test suite
 test *args:
-    cd {{api}} && pnpm exec vitest run "$@"
+    @just ops quality test "$@"
 
 # check + test: the gate for every step
-gate: check test
+gate: ops::quality::gate
 
 # opt-in live tests against real provider APIs (uses .env; costs money)
 live *args:
-    cd {{api}} && pnpm exec vitest run --config vitest.live.config.ts "$@"
+    @just ops quality live "$@"
 
 # run an example, e.g. `just example triage`
 example name:
@@ -32,12 +33,12 @@ example name:
 
 # Show, check, set, or bump the package version.
 version *args:
-    node ops/version.mjs "$@"
+    node ops/version/version.mjs "$@"
 
 # Build an installable JavaScript and TypeScript declaration archive.
 package destination="dist":
-    node ops/package.mjs "$@"
+    @just ops package build "$@"
 
 # Publish the current version and compiled package to the GitHub release for origin.
 release *args:
-    node ops/github-release.mjs "$@"
+    @just ops release publish "$@"

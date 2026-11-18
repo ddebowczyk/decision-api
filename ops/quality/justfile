@@ -1,0 +1,22 @@
+set positional-arguments
+set dotenv-load := true
+
+# List quality commands.
+[default]
+list:
+    @just --list
+
+# Type-check the library, examples and tests.
+check:
+    cd ../../packages/api && pnpm exec tsc -p tsconfig.json --noEmit
+
+# Run the offline suite, optionally filtering by test file.
+test *args:
+    cd ../../packages/api && pnpm exec vitest run "$@"
+
+# Type-check and run all offline tests.
+gate: check test
+
+# Exercise live providers with configured credentials (paid calls).
+live *args:
+    cd ../../packages/api && pnpm exec vitest run --config vitest.live.config.ts "$@"

@@ -1,22 +1,25 @@
 # Repository operations
 
-Run these from the repository root.
+Run `just ops` to list every operations command. Run a module name on its own,
+such as `just ops release`, to see its commands and arguments. Each module
+owns its justfile and implementation. The root justfile also provides shortcuts.
 
-| Command | Result |
-| --- | --- |
-| `just version` | Show the package version and verify its exported value |
-| `just version bump minor` | Increase the minor version in the manifest and exported value. Also accepts `major` and `patch` |
-| `just version set 0.3.0` | Set an explicit stable version |
-| `just gate` | Typecheck and run the offline suite |
-| `just package` | Build the JavaScript and declaration tarball in `dist/`. Pass a directory to change the destination |
-| `just release` | Verify the clean, pushed default branch, check the package, create its tag, and publish the verified tarball to GitHub Releases. Pass a Markdown file to supply release notes |
+| Module | Commands | Root shortcuts |
+| --- | --- | --- |
+| [Version](version/justfile) | `just ops version show`, `check`, `bump <major\|minor\|patch>`, `set <version>` | `just version`, `just version bump minor` |
+| [Quality](quality/justfile) | `just ops quality check`, `test [filter]`, `gate`, `live [filter]` | `just check`, `just test`, `just gate`, `just live` |
+| [Package](package/justfile) | `just ops package build [directory]` | `just package [directory]` |
+| [Release](release/justfile) | `just ops release publish [notes-file]` | `just release [notes-file]` |
 
-Commit and push the version bump before running `just release`. The command
-targets the GitHub repository configured as `origin`, checks that the tag points
-at the local commit, and verifies the uploaded archive. Rerunning against the
-same commit and package bytes resumes a matching draft or verifies a published
-release. The command leaves GitHub repository visibility as configured.
+## Cut a release
 
-The tarball is `@decisions/api` with JavaScript and TypeScript declarations for
-its three entry points. Install the downloaded asset with
+1. Run `just ops version bump minor` (or choose `patch` or `major`).
+2. Run `just ops quality gate`, then commit and push the version change.
+3. Run `just ops release publish` from the clean, pushed default branch. It
+   checks the tag, builds the archive, verifies the uploaded bytes and publishes
+   the GitHub release. Rerun against the same commit to resume a matching draft.
+
+To build locally, use `just ops package build`. It writes the tarball to
+`dist/` by default. Relative output directories and release notes paths resolve
+from the repository root. Install a downloaded archive with
 `pnpm add ./decisions-api-<version>.tgz effect@4.1.3`.

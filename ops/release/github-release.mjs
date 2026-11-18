@@ -3,9 +3,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
 import { setTimeout as delay } from "node:timers/promises"
-import { main, root, run } from "./process.mjs"
-import { pack } from "./package.mjs"
-import { checkedVersion } from "./version.mjs"
+import { main, root, run } from "../lib/process.mjs"
+import { pack } from "../package/package.mjs"
+import { checkedVersion } from "../version/version.mjs"
 
 const git = (...args) => run("git", args)
 const gh = (...args) => run("gh", args)

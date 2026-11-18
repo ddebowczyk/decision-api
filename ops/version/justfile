@@ -1,0 +1,22 @@
+set positional-arguments
+
+# List version commands.
+[default]
+list:
+    @just --list
+
+# Print the current package version.
+show:
+    @node version.mjs show
+
+# Verify the manifest and exported version agree.
+check:
+    @node version.mjs check
+
+# Increment the major, minor or patch component.
+bump part:
+    node version.mjs bump "$1"
+
+# Set an explicit higher stable version.
+set version:
+    node version.mjs set "$1"

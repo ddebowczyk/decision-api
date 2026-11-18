@@ -1,0 +1,13 @@
+# Build the installable archive.
+mod package
+# Check types and exercise the library.
+mod quality
+# Publish a versioned GitHub release.
+mod release
+# Inspect or change the package version.
+mod version
+
+# List every operations command.
+[default]
+list:
+    @just --list --list-submodules

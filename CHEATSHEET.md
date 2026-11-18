@@ -38,4 +38,4 @@ console.log(team.status === "answered" ? team.value : team.status)
 
 Run `just example preview` or `just example testing` offline. Run `just gate` after a change. Live provider checks use credentials and can incur charges.
 
-[Decision lifecycle](docs/design.md) · [Provider design](docs/providers.md) · [Runnable provider and fallback example](packages/api/examples/triage.ts) · [Release commands](ops/README.md)
+[Decision lifecycle](docs/design.md) · [Provider design](docs/providers.md) · [Runnable provider and fallback example](packages/api/examples/triage.ts) · [Operations catalogue](ops/README.md)

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { main, root } from "./process.mjs"
+import { main, root } from "../lib/process.mjs"
 
 const manifestPath = resolve(root, "packages/api/package.json")
 const sourcePath = resolve(root, "packages/api/src/index.ts")

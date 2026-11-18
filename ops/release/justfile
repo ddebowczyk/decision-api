@@ -1,0 +1,10 @@
+set positional-arguments
+
+# List release commands.
+[default]
+list:
+    @just --list
+
+# Publish the pushed version to GitHub, optionally using a Markdown notes file.
+publish *args:
+    node github-release.mjs "$@"

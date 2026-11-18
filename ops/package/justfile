@@ -1,0 +1,10 @@
+set positional-arguments
+
+# List packaging commands.
+[default]
+list:
+    @just --list
+
+# Build the compiled tarball in a directory relative to the repository root.
+build destination="dist":
+    node package.mjs "$1"

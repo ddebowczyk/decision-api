@@ -2,8 +2,8 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { main, root, run } from "./process.mjs"
-import { checkedVersion, manifest } from "./version.mjs"
+import { main, root, run } from "../lib/process.mjs"
+import { checkedVersion, manifest } from "../version/version.mjs"
 
 export const pack = (destination) => {
   const version = checkedVersion()
