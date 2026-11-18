@@ -1,6 +1,6 @@
 # Agent guide: @decisions/api
 
-For agents that write code with the library or change it. Read [README.md](README.md) first.
+For agents that write code with the library or change it. Start with the [agent cheatsheet](../../CHEATSHEET.md) and [library design](../../docs/design.md). See [README.md](README.md) for the API reference.
 
 ## Use the library
 
@@ -18,7 +18,7 @@ For agents that write code with the library or change it. Read [README.md](READM
 - **Tests first:** a behaviour change starts with a test that fails. Retry and budget tests use `TestClock`, and HTTP tests use `ScriptedHttp`.
 - **Purity:** codecs (`encode`/`decode`), `Planner.plan`, `Validate.answer` and `Identity` are pure. Keep effects in `Decision.prepare`, `Transport.send` and `Engine`.
 - **One retry owner:** retries live only in `Engine`. Transport makes a single attempt.
-- **Adding a provider:** official docs first, other clients second; cite them in the snapshot's `sources`. A new wire shape is a codec (registered in `Planner`'s `codecs`); a System One variant is a snapshot. Put HTTP-level framing (`envelope`, `auth`, `{model}` in the path, `{name}` URL parameters) in the snapshot, not in the codec. Unknown grouping or limits stay `"unknown"`, never guessed. Fixtures hold response bodies only.
+- **Adding a provider:** official docs first, other clients second; cite them in the snapshot's `sources`. A new wire shape is a codec (registered in `src/planning/Codecs.ts`); a System One variant is a snapshot. Put HTTP-level framing (`envelope`, `auth`, `{model}` in the path, `{name}` URL parameters) in the snapshot, not in the codec. Unknown grouping or limits stay `"unknown"`, never guessed. Fixtures hold response bodies only.
 - **Wire order:** encode request bodies with `Wire.obj`/`Wire.stringify`, because TypeSafe keeps criteria in the order they were sent. Use `Wire.canonical` only for hashing.
 - **Deployment facts:** a fact about a deployment cites a source and states its `verification` (`documented`, `replay-tested`, `live-tested`, `unknown`). When you change a snapshot, bump its `version`, which changes plan fingerprints.
 - **Model capabilities:** declarations are keyed by exact provider + model. Use `Capabilities.builtIn/get/override` for static discovery and runtime changes; validate metadata with `Capabilities.decode`. New models need an explicit declaration. Preserve `support` versus `adapterSupport`; unknown feature names do not imply support. Capability content is hashed into plans; pass the resolved declaration when planning outside the engine, and rebuild providers/engines after updating a catalog.
